@@ -27,8 +27,10 @@ void CLICKDETECTION(int event, int x, int y, int flags, void* userdata)
 }
 void destination_points (int a , int b) {
      for (int i = 0; i<4 ; i++){
-          int x = destination_pts_temp[i].first*a/1920;
-          int y = destination_pts_temp[i].second*b/1080;
+          destination_pts_temp[i].first = destination_pts_temp[i].first*a/1920;
+          destination_pts_temp[i].second = destination_pts_temp[i].second*b/1080;
+          int x = destination_pts_temp[i].first;
+          int y = destination_pts_temp[i].second;
           destination_pts.push_back(Point2f(x,y));
      }
      
@@ -101,11 +103,17 @@ int main(int argc, char** argv)
      Mat output_image;
      warpPerspective(img,output_image,homography,img.size());
      imwrite("output.jpeg",output_image);
-     Mat outputimg = imread("output.jpeg", IMREAD_GRAYSCALE);
+     
+     Rect cropped_coordinates;
+     cropped_coordinates.x = destination_pts_temp[2].first;
+     cropped_coordinates.y = destination_pts_temp[2].second;
+     cropped_coordinates.width = destination_pts_temp[3].first - destination_pts_temp[2].first;
+     cropped_coordinates.height = destination_pts_temp[0].second - destination_pts_temp[2].second;
 
-     namedWindow("OUTPUT IMAGE", WINDOW_AUTOSIZE);
-     imshow("OUTPUT IMAGE",outputimg);
-     //waitKey(0);
+     Mat crop = output_image(cropped_coordinates);
+     imwrite("cropped_image",crop);
+
+     
      return 0;
 
 }
