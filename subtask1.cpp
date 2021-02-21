@@ -1,14 +1,14 @@
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/opencv.hpp"
 #include <iostream>
 
 using namespace std;
 using namespace cv;
-vector<Point2f> pnt_src,pnt_dst;
+vector<Point2f> source_pts,destination_pts;
 void CLICKDETECTION(int event, int x, int y, int flags, void* userdata)
 {
      if  ( event == EVENT_LBUTTONDOWN )
      {
-          pnt_src.push_back(Point2f(x,y));
+          source_pts.push_back(Point2f(x,y));
      }
      
 }
@@ -16,7 +16,7 @@ void CLICKDETECTION(int event, int x, int y, int flags, void* userdata)
 int main(int argc, char** argv)
 {
      // Read image from file 
-     Mat img = imread("opencv_testimage.jpeg");
+     Mat img = imread("opencv_testimage.jpeg", IMREAD_GRAYSCALE);
 
      //if fail to read the image
      if ( !img.data ) 
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
           cout <<  "Image not found or unable to open" << endl;
           return -1; 
      }
-     cout<<pnt_src.size()<<endl;
+     cout<<source_pts.size()<<endl;
      //Create a window
      namedWindow("Original Image", WINDOW_AUTOSIZE);
 
@@ -35,11 +35,19 @@ int main(int argc, char** argv)
      imshow("Original Image", img);
 
      // Wait until user press some key
-     	waitKey(0);
-     cout<<pnt_src.size()<<endl;
+     waitKey(0);
+     cout<<source_pts.size()<<endl;
      
      cout<<"DONE 4 times"<<endl;
 
+     // Setting destination points 
+     destination_pts= {Point2f(472,52),Point2f(472,830),Point2f(800,830),Point2f(800,52)};
+     Mat homography = findHomography(source_pts,destination_pts);
+     Mat output_image;
+     warpPerspective(img,output_image,homography,img.size());
+     imwrite("output.jpeg",output_image);
+     namedWindow("OUTPUT IMAGE", WINDOW_AUTOSIZE);
+     imshow("OUTPUT IMAGE",output_image);
      return 0;
 
 }
