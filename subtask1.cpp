@@ -5,11 +5,11 @@ using namespace std;
 using namespace cv;
 bool comp(pair<int,int> x,pair<int,int> y)
 {
-     if(x.second>y.second)
+     if(x.second<y.second)
           return true;
      if(x.second == y.second)
      {
-          return x.first>y.first;
+          return x.first<y.first;
      }
      return false;
 }
@@ -20,7 +20,7 @@ void CLICKDETECTION(int event, int x, int y, int flags, void* userdata)
 {
      if  ( event == EVENT_LBUTTONDOWN )
      {
-          source_pts.push_back(make_pair(x,y));
+          source_pts_temp.push_back(make_pair(x,y));
           number_of_mouse_clicks++;
      }
      
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
      imshow("Original Image", img);
      int width_of_inputimage = img.cols; // x coordinate
      int height_of_inputimage=img.rows;  // y coordinate
-     destination_pts_temp = {make_pair(472,52),make_pair(472,830),make_pair(800,830),make_pair(800,52)};
+     destination_pts_temp = {make_pair(472,52),make_pair(800,52),make_pair(472,830),make_pair(800,830)};
 
 
      // Wait until user press some key
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
      sort(source_pts_temp.begin()+2,source_pts_temp.end());
      for(int i = 0; i< 4; i++)
      {
-     	source_pts.push_back(Point2f(source_pts_temp[i].first,source_pts_temp[i].second));
+          source_pts.push_back(Point2f(source_pts_temp[i].first,source_pts_temp[i].second));
 
      }
 
@@ -88,6 +88,14 @@ int main(int argc, char** argv)
      */
      // Setting destination points 
      destination_points(width_of_inputimage,height_of_inputimage);
+     for(auto [a,b]:source_pts)
+     {
+          cout<<a<<" "<<b<<endl;
+     }
+     for(auto [a,b]:destination_pts)
+     {
+          cout<<a<<" "<<b<<endl;
+     }
 
      Mat homography = findHomography(source_pts,destination_pts);
      Mat output_image;
