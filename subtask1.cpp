@@ -4,11 +4,13 @@
 using namespace std;
 using namespace cv;
 vector<Point2f> source_pts,destination_pts;
+int number_of_mouse_clicks = 0;
 void CLICKDETECTION(int event, int x, int y, int flags, void* userdata)
 {
      if  ( event == EVENT_LBUTTONDOWN )
      {
           source_pts.push_back(Point2f(x,y));
+          number_of_mouse_clicks++;
      }
      
 }
@@ -35,7 +37,10 @@ int main(int argc, char** argv)
      imshow("Original Image", img);
 
      // Wait until user press some key
-     waitKey(0);
+     while(1){
+          waitKey(1);
+          if(number_of_mouse_clicks == 4) break;
+     }
      cout<<source_pts.size()<<endl;
      
      cout<<"DONE 4 times"<<endl;
