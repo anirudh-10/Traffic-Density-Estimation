@@ -25,7 +25,15 @@ void CLICKDETECTION(int event, int x, int y, int flags, void* userdata)
      }
      
 }
+void destination_points (int a , int b) {
+     for (int i = 0; i<4 ; i++){
+          int x = destination_pts_temp[i].first*a/1920;
+          int y = destination_pts_temp[i].second*b/1080;
+          destination_pts.push_back(Point2f(x,y));
+     }
+     
 
+}
 int main(int argc, char** argv)
 {
      // Read image from file 
@@ -48,7 +56,8 @@ int main(int argc, char** argv)
      imshow("Original Image", img);
      int width_of_inputimage = img.cols; // x coordinate
      int height_of_inputimage=img.rows;  // y coordinate
-     
+     destination_pts_temp = {make_pair(472,52),make_pair(472,830),make_pair(800,830),make_pair(800,52)};
+
 
      // Wait until user press some key
      while(1){
@@ -62,12 +71,24 @@ int main(int argc, char** argv)
      {
           cout<<a<<" "<<b<<endl;
      }
+
+     sort(source_pts_temp.begin(),source_pts_temp.end(),comp);
+     sort(source_pts_temp.begin(),source_pts_temp.begin()+2);
+     sort(source_pts_temp.begin()+2,source_pts_temp.end());
+     for(int i = 0; i< 4; i++)
+     {
+     	source_pts.push_back(Point2f(source_pts_temp[i].first,source_pts_temp[i].second));
+
+     }
+
+
      /*
           x*y
           (472*x/1920,52*y/1080)
      */
      // Setting destination points 
-     destination_pts= {Point2f(472,52),Point2f(472,830),Point2f(800,830),Point2f(800,52)};
+     destination_points(width_of_inputimage,height_of_inputimage);
+
      Mat homography = findHomography(source_pts,destination_pts);
      Mat output_image;
      warpPerspective(img,output_image,homography,img.size());
