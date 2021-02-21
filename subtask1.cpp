@@ -39,7 +39,7 @@ void destination_points (int a , int b) {
 int main(int argc, char** argv)
 {
      // Read image from file 
-     Mat img = imread("test.jpg", IMREAD_GRAYSCALE);
+     Mat img = imread("traffic.jpg", IMREAD_GRAYSCALE);
 
      //if fail to read the image
      if ( !img.data ) 
@@ -49,7 +49,8 @@ int main(int argc, char** argv)
      }
      cout<<source_pts.size()<<endl;
      //Create a window
-     namedWindow("Original Image", WINDOW_AUTOSIZE);
+     namedWindow("Original Image",  WINDOW_NORMAL);
+     cv::setWindowProperty("Original Image",WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN);
 
      //set the callback function for any mouse event
      setMouseCallback("Original Image", CLICKDETECTION, NULL);
@@ -67,6 +68,7 @@ int main(int argc, char** argv)
           if(number_of_mouse_clicks == 4) break;
      }
      cout<<source_pts.size()<<endl;
+     destroyWindow("Original Image");
      
      cout<<"DONE 4 times"<<endl;
      for( auto [a,b]:source_pts)
@@ -90,29 +92,30 @@ int main(int argc, char** argv)
      */
      // Setting destination points 
      destination_points(width_of_inputimage,height_of_inputimage);
-     for(auto [a,b]:source_pts)
-     {
-          cout<<a<<" "<<b<<endl;
-     }
-     for(auto [a,b]:destination_pts)
-     {
-          cout<<a<<" "<<b<<endl;
-     }
+     
 
      Mat homography = findHomography(source_pts,destination_pts);
-     Mat output_image;
-     warpPerspective(img,output_image,homography,img.size());
-     imwrite("output.jpeg",output_image);
+     Mat projected_image;
+     warpPerspective(img,projected_image,homography,img.size());
+     imwrite("Projected Frame.jpeg",projected_image);
+     namedWindow("OUTPUT IMAGE", WINDOW_AUTOSIZE);
+     
+     imshow("OUTPUT IMAGE",projected_image);
+     waitKey(0);
+     destroyWindow("OUTPUT IMAGE");
      
      Rect cropped_coordinates;
-     cropped_coordinates.x = destination_pts_temp[2].first;
-     cropped_coordinates.y = destination_pts_temp[2].second;
-     cropped_coordinates.width = destination_pts_temp[3].first - destination_pts_temp[2].first;
-     cropped_coordinates.height = destination_pts_temp[0].second - destination_pts_temp[2].second;
+     cropped_coordinates.x = destination_pts_temp[0].first;
+     cropped_coordinates.y = destination_pts_temp[0].second;
+     cropped_coordinates.width = destination_pts_temp[1].first - destination_pts_temp[0].first;
+     cropped_coordinates.height = destination_pts_temp[2].second - destination_pts_temp[0].second;
 
-     Mat crop = output_image(cropped_coordinates);
-     imwrite("cropped_image",crop);
-
+     Mat crop = projected_image(cropped_coordinates);
+     imwrite("cropped_image.jpg",crop);
+     namedWindow("CROPPED IMAGE", WINDOW_AUTOSIZE);
+     imshow("CROPPED IMAGE",crop);
+     waitKey(0);
+     destroyWindow("CROPPED IMAGE");
      
      return 0;
 
