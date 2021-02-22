@@ -31,8 +31,7 @@ If having trouble in previous step run the following 2 commands in order:
 1) For Compiling :$ make compile
 
 2) For Executing :$ make run file=$(filename) 
-
-				or
+			or
 2) For Executing :$ ./a.out $(filename)
 
 Where filename is same as before
