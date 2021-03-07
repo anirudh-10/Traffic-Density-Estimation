@@ -22,17 +22,14 @@ iii. MacOS: https://docs.opencv.org/master/d0/db2/tutorial_macos_install.html
 
 2) On Terminal Run the Command (On Linux OS):
 
-i. Compiling and Executing :$ make all file=$(filename)
+i) Compiling and Executing :$ make all file=$(filename)
 
-where filename is the name of the image file with extension
+Where filename is the name of the image file with extension
 
 If having trouble in previous step run the following 2 commands in order:
 
 1) For Compiling :$ make compile
 
-2) For Executing :$ make run file=$(filename) 
-
-				or
-2) For Executing :$ ./a.out $(filename)
+2) For Executing :$ make run file=$(filename) or $ ./a.out $(filename)
 
 Where filename is same as before
