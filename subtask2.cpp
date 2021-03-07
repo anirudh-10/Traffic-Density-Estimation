@@ -164,29 +164,6 @@ void homography_of_frames(Mat img,Mat&crop)
 
 }
 
-string type2str(int type) {
-  string r;
-
-  uchar depth = type & CV_MAT_DEPTH_MASK;
-  uchar chans = 1 + (type >> CV_CN_SHIFT);
-
-  switch ( depth ) {
-    case CV_8U:  r = "8U"; break;
-    case CV_8S:  r = "8S"; break;
-    case CV_16U: r = "16U"; break;
-    case CV_16S: r = "16S"; break;
-    case CV_32S: r = "32S"; break;
-    case CV_32F: r = "32F"; break;
-    case CV_64F: r = "64F"; break;
-    default:     r = "User"; break;
-  }
-
-  r += "C";
-  r += (chans+'0');
-
-  return r;
-}
-void show(Mat);
 int main(int argc, char** argv)
 {
 
@@ -228,14 +205,19 @@ int main(int argc, char** argv)
 
     namedWindow(window_name, WINDOW_NORMAL); //create a window
 
-    Mat cropped_frame_prev = emptyimg;
-    Mat diff_dynamic = emptyimg;
-
+    Mat cropped_frame_prev;
+    Mat diff_dynamic;
+    int l = 0;
+    
     while (true)
     {
         Mat frame;
-        int l = 0;
         bool bSuccess = cap.read(frame); // read a new frame from video 
+
+        int total_pixels = 0;
+        int static_pixels = 0;
+        int dynamic_pixels = 0;
+        int e = 2;
 
         //Breaking the while loop at the end of the video
         if (bSuccess == false) 
@@ -249,38 +231,46 @@ int main(int argc, char** argv)
         Mat cropped_frame;
 
         homography_of_frames(frame,cropped_frame);
+        Mat diff_static = cropped_frame - emptyimg;
 
         if (l>0){
             diff_dynamic = cropped_frame - cropped_frame_prev;
+            imshow(window_name, diff_dynamic);
         }
         
-        Mat diff_static = cropped_frame - emptyimg;
         
-        imshow(window_name, diff_dynamic);
+
+        
         if (waitKey(10) == 27)
         {
             cout << "Esc key is pressed by user. Stoppig the video" << endl;
             break;
         }
 
-        if (fps == 4){
-            auto *myData_emp = emptyimg.data;
-            int width = emptyimg.cols;
-            int height = emptyimg.rows;
-            
-            auto *myData_frame = frame.data;
-            
-            for(int i = 0; i < height; i++)
-            {
-                for(int j = 0; j < width; j++)
-                {
-                    auto val = myData_emp[ i * width + j];
-                    //do whatever you want with your value
-
-                    cout<<val<<endl;
+        if (fps == 0){
+            for(int i=0;i<emptyimg.rows;i++) {
+                for (int j=0;j<emptyimg.cols;j++){  
+                    total_pixels++;
+                    //cout<<"reached"<<endl;
+                    int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+                    if (abs(a) > e){
+                        static_pixels++;
+                    }
+                    //cout<<"reached2"<<endl;
+                    
+                    if (l>0){
+                        int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+                        if (abs(b) > e){
+                            dynamic_pixels++;
+                    }
+                    }
+                    //cout<<"reached3"<<endl;
                 }
             }
+            float output = ((float)dynamic_pixels)/((float)total_pixels);
+            cout<<output <<endl;
         }
+        
         fps++;
         fps = fps%3;
         l++;
@@ -291,12 +281,4 @@ int main(int argc, char** argv)
 
     return 0;
     
-}
-
-void show(Mat img){
-
-    
-
-    return;
-
 }
