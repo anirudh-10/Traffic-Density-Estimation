@@ -53,7 +53,7 @@ void AutoScaling (int a , int b) {
     } 
 }
 
-void empty_image(string s)
+void empty_image(string s, Mat&crop)
 {
     // Reading Image
     Mat img = imread(s, IMREAD_GRAYSCALE);
@@ -130,7 +130,7 @@ void empty_image(string s)
     cropped_coordinates.height = destination_pts_temp[2].second - destination_pts_temp[0].second;
 
     // Forming the Matrix for Cropped Image 
-    Mat crop = projected_image(cropped_coordinates);
+    crop = projected_image(cropped_coordinates);
 
     
     return;
@@ -163,6 +163,30 @@ void homography_of_frames(Mat img,Mat&crop)
     crop = projected_image(cropped_coordinates);
 
 }
+
+string type2str(int type) {
+  string r;
+
+  uchar depth = type & CV_MAT_DEPTH_MASK;
+  uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+  switch ( depth ) {
+    case CV_8U:  r = "8U"; break;
+    case CV_8S:  r = "8S"; break;
+    case CV_16U: r = "16U"; break;
+    case CV_16S: r = "16S"; break;
+    case CV_32S: r = "32S"; break;
+    case CV_32F: r = "32F"; break;
+    case CV_64F: r = "64F"; break;
+    default:     r = "User"; break;
+  }
+
+  r += "C";
+  r += (chans+'0');
+
+  return r;
+}
+void show(Mat);
 int main(int argc, char** argv)
 {
 
@@ -183,5 +207,96 @@ int main(int argc, char** argv)
  //        return -1;
 	// }
 
+
+    VideoCapture cap("trafficvideo.mp4"); 
+
+    // if not success, exit program
+    if (cap.isOpened() == false)  
+    {
+        cout << "Cannot open the video file" << endl;
+        return -1;
+    }
+
+    //Uncomment the following line if you want to start the video in the middle
+    //cap.set(CAP_PROP_POS_MSEC, 300); 
+    int fps = 0;
+
+    Mat emptyimg;
+    empty_image("empty.jpg", emptyimg);
+
+    String window_name = "My First Video";
+
+    namedWindow(window_name, WINDOW_NORMAL); //create a window
+
+    Mat cropped_frame_prev = emptyimg;
+    Mat diff_dynamic = emptyimg;
+
+    while (true)
+    {
+        Mat frame;
+        int l = 0;
+        bool bSuccess = cap.read(frame); // read a new frame from video 
+
+        //Breaking the while loop at the end of the video
+        if (bSuccess == false) 
+        {
+        cout << "Found the end of the video" << endl;
+        break;
+        }
+        Mat temp_gray;
+        cvtColor(frame, temp_gray, COLOR_BGR2GRAY);
+        frame = temp_gray;
+        Mat cropped_frame;
+
+        homography_of_frames(frame,cropped_frame);
+
+        if (l>0){
+            diff_dynamic = cropped_frame - cropped_frame_prev;
+        }
+        
+        Mat diff_static = cropped_frame - emptyimg;
+        
+        imshow(window_name, diff_dynamic);
+        if (waitKey(10) == 27)
+        {
+            cout << "Esc key is pressed by user. Stoppig the video" << endl;
+            break;
+        }
+
+        if (fps == 4){
+            auto *myData_emp = emptyimg.data;
+            int width = emptyimg.cols;
+            int height = emptyimg.rows;
+            
+            auto *myData_frame = frame.data;
+            
+            for(int i = 0; i < height; i++)
+            {
+                for(int j = 0; j < width; j++)
+                {
+                    auto val = myData_emp[ i * width + j];
+                    //do whatever you want with your value
+
+                    cout<<val<<endl;
+                }
+            }
+        }
+        fps++;
+        fps = fps%3;
+        l++;
+        cropped_frame_prev = cropped_frame;
+        
+    }
+
+
+    return 0;
     
+}
+
+void show(Mat img){
+
+    
+
+    return;
+
 }
