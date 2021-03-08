@@ -1,8 +1,8 @@
 compile:
-	g++ subtask1.cpp `pkg-config --cflags --libs opencv`
+	g++ subtask2.cpp `pkg-config --cflags --libs opencv`
 run:
-	./a.out $(file)
+	./a.out $(empty) $(video)
 all:
-	g++ subtask1.cpp `pkg-config --cflags --libs opencv`	
-	./a.out $(file)
+	g++ subtask2.cpp `pkg-config --cflags --libs opencv`	
+	./a.out $(empty) $(video)
 
