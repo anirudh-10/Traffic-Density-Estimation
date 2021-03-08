@@ -206,9 +206,9 @@ int main(int argc, char** argv)
     int l = 0;
     
 
-     std::ofstream myfile;
-     myfile.open ("example3.csv");
-     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+     // std::ofstream myfile;
+     // myfile.open ("example3.csv");
+     // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
 
 
     //Iterating Frame by Frame
@@ -299,7 +299,7 @@ int main(int argc, char** argv)
         cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
 
         
-        myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
+        // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
 
     return 0;
