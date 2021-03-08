@@ -273,7 +273,7 @@ int main(int argc, char** argv)
         cropped_frame_prev = cropped_frame;
 
         // Improving Queue Density
-        while(output_dynamic-output_static<0.001 and output_dynamic>=output_static)
+        while(output_dynamic>=output_static or (output_static-output_dynamic<0.001 and output_dynamic<=output_static))
         {
             e_static/=1.15;
             if(e_static<1.5)
