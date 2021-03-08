@@ -20,6 +20,8 @@ bool comp(pair<int,int> x,pair<int,int> y)
 vector<Point2f> source_pts,destination_pts;
 vector<pair<int,int>> source_pts_temp,destination_pts_temp;
 
+Mat homography;
+
 // Global Variable for storing number of times left mouse button is clicked on the displayed image
 int number_of_mouse_clicks = 0;
 
@@ -108,7 +110,7 @@ void empty_image(string s, Mat&crop)
     AutoScaling(width_of_inputimage,height_of_inputimage);
      
     // Finding the homography matrix for given 2 set of points
-    Mat homography = findHomography(source_pts,destination_pts);
+    homography = findHomography(source_pts,destination_pts);
 
     // Defining Matrix for the projected image
     Mat projected_image;
@@ -137,8 +139,6 @@ void empty_image(string s, Mat&crop)
 }
 void homography_of_frames(Mat img,Mat&crop)
 {
-    // Finding the homography matrix for given 2 set of points
-    Mat homography = findHomography(source_pts,destination_pts);
 
     // Defining Matrix for the projected image
     Mat projected_image;
@@ -209,6 +209,8 @@ int main(int argc, char** argv)
     Mat diff_dynamic;
     int l = 0;
     
+    vector<float> queue_density;
+    vector<float> dynamic_density;
     while (true)
     {
         Mat frame;
@@ -217,7 +219,8 @@ int main(int argc, char** argv)
         int total_pixels = 0;
         int static_pixels = 0;
         int dynamic_pixels = 0;
-        int e = 2;
+        int e_static = 25;
+        int e_dynamic = 1;
 
         //Breaking the while loop at the end of the video
         if (bSuccess == false) 
@@ -237,10 +240,7 @@ int main(int argc, char** argv)
             diff_dynamic = cropped_frame - cropped_frame_prev;
             imshow(window_name, diff_dynamic);
         }
-        
-        
-
-        
+          
         if (waitKey(10) == 27)
         {
             cout << "Esc key is pressed by user. Stoppig the video" << endl;
@@ -251,24 +251,27 @@ int main(int argc, char** argv)
             for(int i=0;i<emptyimg.rows;i++) {
                 for (int j=0;j<emptyimg.cols;j++){  
                     total_pixels++;
-                    //cout<<"reached"<<endl;
                     int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                    if (abs(a) > e){
+                    if (abs(a) > e_static){
                         static_pixels++;
                     }
-                    //cout<<"reached2"<<endl;
                     
                     if (l>0){
                         int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                        if (abs(b) > e){
+                        if (abs(b) > e_dynamic){
                             dynamic_pixels++;
                     }
                     }
-                    //cout<<"reached3"<<endl;
                 }
             }
-            float output = ((float)dynamic_pixels)/((float)total_pixels);
-            cout<<output <<endl;
+            float output_static = ((float)dynamic_pixels)/((float)total_pixels);
+            float output_dynamic = ((float)dynamic_pixels)/((float)total_pixels);
+
+            queue_denisty.push_back(output_static);
+            dynamic_density.push_back(output_dynamic);
+
+            
+            cout<<"Frame no : "<<l<<" Queue density "<<output_static<<" dynamic density "<<output_dynamic<<endl;
         }
         
         fps++;
@@ -277,7 +280,6 @@ int main(int argc, char** argv)
         cropped_frame_prev = cropped_frame;
         
     }
-
 
     return 0;
     
