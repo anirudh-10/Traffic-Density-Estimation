@@ -168,25 +168,25 @@ void homography_of_frames(Mat img,Mat&crop)
 int main(int argc, char** argv)
 {
 
-    // if(argc < 2)
-    // {
-    //  cout<<"Please specify a File name in the format : ./a.out $(filename) or"<<endl;
- //        cout<<"To Compile and Execute Type Command : make all file=$(filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run file=$(filename)"<<endl;
- //        throw std::invalid_argument( "Wrong Command Line Argument");
-    //  return -1;
-    // }
+    if(argc < 3)
+    {
+        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        throw std::invalid_argument( "Wrong Command Line Argument");
+        return -1;
+    }
 
-    // if(argc > 2)
-    // {
-    //  cout<<"Too Many Arguments. Enter a single Filename"<<endl;
- //        cout<<"To Execute Type Command : ./a.out $(filename) or"<<endl;
-    //  cout<<"To Compile and Execute Type Command : make all file=$(filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run file=$(filename)"<<endl;
- //        throw std::invalid_argument( "Wrong Command Line Argument");
- //        return -1;
-    // }
+    if(argc > 3)
+    {
+        cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
+        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        throw std::invalid_argument( "Wrong Command Line Argument");
+        return -1;
+    }
 
-
-    VideoCapture cap("trafficvideo.mp4"); 
+    // Reading the Video
+    VideoCapture cap(argv[2]); 
 
     // if not success, exit program
     if (cap.isOpened() == false)  
@@ -195,63 +195,51 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    //Uncomment the following line if you want to start the video in the middle
-    //cap.set(CAP_PROP_POS_MSEC, 300); 
-    int fps = 0;
-
+    // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
-    empty_image("empty.jpg", emptyimg);
+    empty_image(argv[1], emptyimg);
 
-    String window_name = "My First Video";
-
-    namedWindow(window_name, WINDOW_NORMAL); //create a window
-
+    // Storing Previous Frames
     Mat cropped_frame_prev,cropped_frame_2ndlast,cropped_frame_3rdlast;
-    Mat diff_dynamic;
+
+    // Counting Number of frames
     int l = 0;
     
-    vector<float> queue_density;
-    vector<float> dynamic_density;
-    std::ofstream myfile;
-    myfile.open ("example.csv");
-    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+
+    // std::ofstream myfile;
+    // myfile.open ("example2.csv");
+    // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+
+
+    //Iterating Frame by Frame
     while (true)
     {
         Mat frame;
-        bool bSuccess = cap.read(frame); // read a new frame from video 
+        bool done = cap.read(frame); // read a new frame from video 
 
-        int total_pixels = 0;
-        int static_pixels = 0;
-        int dynamic_pixels = 0;
-        int e_static = 35;
-        int e_dynamic = 0;
+        int total_pixels = 0; 
+        int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
+        int dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
+        int e_static = 35; // Error for estimating queue density (Found Experimentally)
+        int e_dynamic = 0;  // error for estimating dynamic density (Found Experimentally)
 
         //Breaking the while loop at the end of the video
-        if (bSuccess == false) 
+        if (done == false) 
         {
-        cout << "Found the end of the video" << endl;
-        break;
+            cout << "Found the end of the video" << endl;
+            break;
         }
+
+        //Converting Video Frame to grayscale
         Mat temp_gray;
         cvtColor(frame, temp_gray, COLOR_BGR2GRAY);
         frame = temp_gray;
         Mat cropped_frame;
 
+        // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
-        Mat diff_static = cropped_frame - emptyimg;
-
-        if (l>0){
-            diff_dynamic = cropped_frame - cropped_frame_prev;
-            imshow(window_name, diff_static);
-        }
           
-        if (waitKey(10) == 27)
-        {
-            cout << "Esc key is pressed by user. Stoppig the video" << endl;
-            break;
-        }
-
-        
+        // Estimating Pixels changed in static and dynamic matrix
         for(int i=0;i<emptyimg.rows;i++) {
             for (int j=0;j<emptyimg.cols;j++){  
                 total_pixels++;
@@ -270,25 +258,48 @@ int main(int argc, char** argv)
                 }
             }
         }
+
+        // calculating queue and dynamic density
         float output_static = ((float)static_pixels)/((float)total_pixels);
         float output_dynamic = ((float)dynamic_pixels)/((float)total_pixels);
 
-        queue_density.push_back(output_static);
-        dynamic_density.push_back(output_dynamic);
-
+        
         cout<<fixed<<setprecision(3);
 
+        // Updating States 
         l++;
         cropped_frame_3rdlast = cropped_frame_2ndlast;
         cropped_frame_2ndlast = cropped_frame_prev;
         cropped_frame_prev = cropped_frame;
-        if(output_dynamic>output_static)
+
+        // Improving Queue Density
+        while(output_dynamic>output_static)
         {
-            output_static = output_dynamic;
+            e_static/=1.15;
+            if(e_static<1.5)
+            {
+                output_static=output_dynamic+0.05;
+                break;
+            }
+            static_pixels=0;
+            total_pixels=0;
+            for(int i=0;i<emptyimg.rows;i++) {
+                for (int j=0;j<emptyimg.cols;j++){  
+                    total_pixels++;
+                    int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+                    if (abs(a) > e_static){
+                        static_pixels++;
+                    }
+                }
+            }
+            output_static = ((float)static_pixels)/((float)total_pixels);
         }
+
+        // Outputting the Values on the terminal
+        cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
+
         
-        //cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
-        myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
+        //myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
 
     return 0;
