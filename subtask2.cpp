@@ -1,6 +1,7 @@
 #include "opencv2/opencv.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <fstream>
 
 using namespace std;
 using namespace cv;
@@ -167,22 +168,22 @@ void homography_of_frames(Mat img,Mat&crop)
 int main(int argc, char** argv)
 {
 
-	// if(argc < 2)
-	// {
-	// 	cout<<"Please specify a File name in the format : ./a.out $(filename) or"<<endl;
+    // if(argc < 2)
+    // {
+    //  cout<<"Please specify a File name in the format : ./a.out $(filename) or"<<endl;
  //        cout<<"To Compile and Execute Type Command : make all file=$(filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run file=$(filename)"<<endl;
  //        throw std::invalid_argument( "Wrong Command Line Argument");
-	// 	return -1;
-	// }
+    //  return -1;
+    // }
 
-	// if(argc > 2)
-	// {
-	// 	cout<<"Too Many Arguments. Enter a single Filename"<<endl;
+    // if(argc > 2)
+    // {
+    //  cout<<"Too Many Arguments. Enter a single Filename"<<endl;
  //        cout<<"To Execute Type Command : ./a.out $(filename) or"<<endl;
-	// 	cout<<"To Compile and Execute Type Command : make all file=$(filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run file=$(filename)"<<endl;
+    //  cout<<"To Compile and Execute Type Command : make all file=$(filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run file=$(filename)"<<endl;
  //        throw std::invalid_argument( "Wrong Command Line Argument");
  //        return -1;
-	// }
+    // }
 
 
     VideoCapture cap("trafficvideo.mp4"); 
@@ -205,12 +206,15 @@ int main(int argc, char** argv)
 
     namedWindow(window_name, WINDOW_NORMAL); //create a window
 
-    Mat cropped_frame_prev;
+    Mat cropped_frame_prev,cropped_frame_2ndlast,cropped_frame_3rdlast;
     Mat diff_dynamic;
     int l = 0;
     
     vector<float> queue_density;
     vector<float> dynamic_density;
+    std::ofstream myfile;
+    myfile.open ("example.csv");
+    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
     while (true)
     {
         Mat frame;
@@ -219,8 +223,8 @@ int main(int argc, char** argv)
         int total_pixels = 0;
         int static_pixels = 0;
         int dynamic_pixels = 0;
-        int e_static = 25;
-        int e_dynamic = 1;
+        int e_static = 35;
+        int e_dynamic = 0;
 
         //Breaking the while loop at the end of the video
         if (bSuccess == false) 
@@ -238,7 +242,7 @@ int main(int argc, char** argv)
 
         if (l>0){
             diff_dynamic = cropped_frame - cropped_frame_prev;
-            imshow(window_name, diff_dynamic);
+            imshow(window_name, diff_static);
         }
           
         if (waitKey(10) == 27)
@@ -247,38 +251,44 @@ int main(int argc, char** argv)
             break;
         }
 
-        if (fps == 0){
-            for(int i=0;i<emptyimg.rows;i++) {
-                for (int j=0;j<emptyimg.cols;j++){  
-                    total_pixels++;
-                    int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                    if (abs(a) > e_static){
-                        static_pixels++;
-                    }
+        
+        for(int i=0;i<emptyimg.rows;i++) {
+            for (int j=0;j<emptyimg.cols;j++){  
+                total_pixels++;
+                int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+                if (abs(a) > e_static){
+                    static_pixels++;
+                }
                     
-                    if (l>0){
-                        int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                        if (abs(b) > e_dynamic){
-                            dynamic_pixels++;
-                    }
+                if (l>2){
+                    int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+                    int c = cropped_frame_2ndlast.at<uchar>(i,j) - cropped_frame_prev.at<uchar>(i,j);
+                    int d = cropped_frame_3rdlast.at<uchar>(i,j) -cropped_frame_2ndlast.at<uchar>(i,j);
+                    if (abs(b) > e_dynamic and abs(c) > e_dynamic and abs(d) > e_dynamic ){
+                        dynamic_pixels++;
                     }
                 }
             }
-            float output_static = ((float)dynamic_pixels)/((float)total_pixels);
-            float output_dynamic = ((float)dynamic_pixels)/((float)total_pixels);
+        }
+        float output_static = ((float)static_pixels)/((float)total_pixels);
+        float output_dynamic = ((float)dynamic_pixels)/((float)total_pixels);
 
-            queue_denisty.push_back(output_static);
-            dynamic_density.push_back(output_dynamic);
+        queue_density.push_back(output_static);
+        dynamic_density.push_back(output_dynamic);
 
-            
-            cout<<"Frame no : "<<l<<" Queue density "<<output_static<<" dynamic density "<<output_dynamic<<endl;
+        cout<<fixed<<setprecision(3);
+
+        l++;
+        cropped_frame_3rdlast = cropped_frame_2ndlast;
+        cropped_frame_2ndlast = cropped_frame_prev;
+        cropped_frame_prev = cropped_frame;
+        if(output_dynamic>output_static)
+        {
+            output_static = output_dynamic;
         }
         
-        fps++;
-        fps = fps%3;
-        l++;
-        cropped_frame_prev = cropped_frame;
-        
+        //cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
+        myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
 
     return 0;
