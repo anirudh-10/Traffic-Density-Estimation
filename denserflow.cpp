@@ -326,7 +326,7 @@ int main(int argc, char** argv)
         // }
 
         // Outputting the Values on the terminal
-        cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
+        //cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
 
         
         // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
