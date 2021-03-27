@@ -378,7 +378,7 @@ int main(int argc, char** argv)
         // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
           
-        if (l%x==3){
+        if (l%x==0){
             // Estimating Pixels changed in static and dynamic matrix
             for(int i=0;i<emptyimg.rows;i++) {
                 for (int j=0;j<emptyimg.cols;j++){  
