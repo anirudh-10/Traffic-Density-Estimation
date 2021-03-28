@@ -2,9 +2,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
-
+#define pb push_back
 using namespace std;
 using namespace cv;
+vector<bool> is_homo;
 // Comparator Function for sorting of Source points( As Clicked By User)
 bool comp(pair<int,int> x,pair<int,int> y)
 {
@@ -184,6 +185,7 @@ int main(int argc, char** argv)
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
+    is_homo.reserve(10000);
     int x = stoi(argv[3]);
     vector<float> baseline_queue,baseline_dynamic,method1_queue,method1_dynamic;
     time_t baseline_start,baseline_end,method1_start,method1_end;
@@ -193,129 +195,129 @@ int main(int argc, char** argv)
 
     time(&baseline_start);
     // Reading the Video
-    {VideoCapture cap(argv[2]); 
+    // {VideoCapture cap(argv[2]); 
 
-    // if not success, exit program
-    if (cap.isOpened() == false)  
-    {
-        cout << "Cannot open the video file" << endl;
-        return -1;
-    }
+    // // if not success, exit program
+    // if (cap.isOpened() == false)  
+    // {
+    //     cout << "Cannot open the video file" << endl;
+    //     return -1;
+    // }
 
     
 
-    // Storing Previous Frames
-    Mat cropped_frame_prev,cropped_frame_2ndlast,cropped_frame_3rdlast;
+    // // Storing Previous Frames
+    // Mat cropped_frame_prev,cropped_frame_2ndlast,cropped_frame_3rdlast;
 
-    // Counting Number of frames
-    int l = 0;
+    // // Counting Number of frames
+    // int l = 0;
     
 
-     // std::ofstream myfile;
-     // myfile.open ("example3.csv");
-     // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+    //  // std::ofstream myfile;
+    //  // myfile.open ("example3.csv");
+    //  // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
 
 
-    //Iterating Frame by Frame
-    while (true)
-    {
-        Mat frame;
-        bool done = cap.read(frame); // read a new frame from video 
+    // //Iterating Frame by Frame
+    // while (true)
+    // {
+    //     Mat frame;
+    //     bool done = cap.read(frame); // read a new frame from video 
 
-        int total_pixels = 0; 
-        int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
-        int dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
-        int e_static = 35; // Error for estimating queue density (Found Experimentally)
-        int e_dynamic = 0;  // error for estimating dynamic density (Found Experimentally)
+    //     int total_pixels = 0; 
+    //     int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
+    //     int dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
+    //     int e_static = 35; // Error for estimating queue density (Found Experimentally)
+    //     int e_dynamic = 0;  // error for estimating dynamic density (Found Experimentally)
 
-        //Breaking the while loop at the end of the video
-        if (done == false) 
-        {
-            cout << "Found the end of the video" << endl;
-            break;
-        }
+    //     //Breaking the while loop at the end of the video
+    //     if (done == false) 
+    //     {
+    //         cout << "Found the end of the video" << endl;
+    //         break;
+    //     }
 
-        //Converting Video Frame to grayscale
-        Mat temp_gray;
-        cvtColor(frame, temp_gray, COLOR_BGR2GRAY);
-        frame = temp_gray;
-        Mat cropped_frame;
+    //     //Converting Video Frame to grayscale
+    //     Mat temp_gray;
+    //     cvtColor(frame, temp_gray, COLOR_BGR2GRAY);
+    //     frame = temp_gray;
+    //     Mat cropped_frame;
 
-        // Applying Homography to the current frame
-        homography_of_frames(frame,cropped_frame);
+    //     // Applying Homography to the current frame
+    //     homography_of_frames(frame,cropped_frame);
           
-        // Estimating Pixels changed in static and dynamic matrix
-        for(int i=0;i<emptyimg.rows;i++) {
-            for (int j=0;j<emptyimg.cols;j++){  
-                total_pixels++;
-                int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                if (abs(a) > e_static){
-                    static_pixels++;
-                }
+    //     // Estimating Pixels changed in static and dynamic matrix
+    //     for(int i=0;i<emptyimg.rows;i++) {
+    //         for (int j=0;j<emptyimg.cols;j++){  
+    //             total_pixels++;
+    //             int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+    //             if (abs(a) > e_static){
+    //                 static_pixels++;
+    //             }
                     
-                if (l>2){
-                    int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                    int c = cropped_frame_2ndlast.at<uchar>(i,j) - cropped_frame_prev.at<uchar>(i,j);
-                    int d = cropped_frame_3rdlast.at<uchar>(i,j) -cropped_frame_2ndlast.at<uchar>(i,j);
-                    if (abs(b) > e_dynamic and abs(c) > e_dynamic and abs(d) > e_dynamic ){
-                        dynamic_pixels++;
-                    }
-                }
-            }
-        }
+    //             if (l>2){
+    //                 int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+    //                 int c = cropped_frame_2ndlast.at<uchar>(i,j) - cropped_frame_prev.at<uchar>(i,j);
+    //                 int d = cropped_frame_3rdlast.at<uchar>(i,j) -cropped_frame_2ndlast.at<uchar>(i,j);
+    //                 if (abs(b) > e_dynamic and abs(c) > e_dynamic and abs(d) > e_dynamic ){
+    //                     dynamic_pixels++;
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        // calculating queue and dynamic density
-        float output_static = ((float)static_pixels)/((float)total_pixels);
-        float output_dynamic = ((float)dynamic_pixels)/((float)total_pixels);
+    //     // calculating queue and dynamic density
+    //     float output_static = ((float)static_pixels)/((float)total_pixels);
+    //     float output_dynamic = ((float)dynamic_pixels)/((float)total_pixels);
 
         
-        cout<<fixed<<setprecision(3);
+    //     cout<<fixed<<setprecision(3);
 
-        // Updating States 
-        l++;
-        cropped_frame_3rdlast = cropped_frame_2ndlast;
-        cropped_frame_2ndlast = cropped_frame_prev;
-        cropped_frame_prev = cropped_frame;
+    //     // Updating States 
+    //     l++;
+    //     cropped_frame_3rdlast = cropped_frame_2ndlast;
+    //     cropped_frame_2ndlast = cropped_frame_prev;
+    //     cropped_frame_prev = cropped_frame;
 
-        // Improving Queue Density
-        while(output_dynamic>=output_static or (output_static-output_dynamic<0.001 and output_dynamic<=output_static))
-        {
-            e_static/=1.15;
-            if(e_static<1.5)
-            {
-                output_static=output_dynamic+0.05;
-                break;
-            }
-            static_pixels=0;
-            total_pixels=0;
-            for(int i=0;i<emptyimg.rows;i++) {
-                for (int j=0;j<emptyimg.cols;j++){  
-                    total_pixels++;
-                    int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                    if (abs(a) > e_static){
-                        static_pixels++;
-                    }
-                }
-            }
-            output_static = ((float)static_pixels)/((float)total_pixels);
-        }
+    //     // Improving Queue Density
+    //     while(output_dynamic>=output_static or (output_static-output_dynamic<0.001 and output_dynamic<=output_static))
+    //     {
+    //         e_static/=1.15;
+    //         if(e_static<1.5)
+    //         {
+    //             output_static=output_dynamic+0.05;
+    //             break;
+    //         }
+    //         static_pixels=0;
+    //         total_pixels=0;
+    //         for(int i=0;i<emptyimg.rows;i++) {
+    //             for (int j=0;j<emptyimg.cols;j++){  
+    //                 total_pixels++;
+    //                 int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+    //                 if (abs(a) > e_static){
+    //                     static_pixels++;
+    //                 }
+    //             }
+    //         }
+    //         output_static = ((float)static_pixels)/((float)total_pixels);
+    //     }
 
-        // Outputting the Values on the terminal
-        cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
-        baseline_queue.push_back(output_static);
-        baseline_dynamic.push_back(output_dynamic);
+    //     // Outputting the Values on the terminal
+    //     cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
+    //     baseline_queue.push_back(output_static);
+    //     baseline_dynamic.push_back(output_dynamic);
         
-        // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
-    }}
+    //     // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
+    // }}
     time(&baseline_end);
     
 
 
-    cout<<"Change of Method!!!!"<<endl;
-    cout<<"Change of Method!!!!"<<endl;
-    cout<<"Change of Method!!!!"<<endl;
-    cout<<"Change of Method!!!!"<<endl;
-    cout<<"Change of Method!!!!"<<endl;
+    // cout<<"Change of Method!!!!"<<endl;
+    // cout<<"Change of Method!!!!"<<endl;
+    // cout<<"Change of Method!!!!"<<endl;
+    // cout<<"Change of Method!!!!"<<endl;
+    // cout<<"Change of Method!!!!"<<endl;
 
     time(&method1_start);
     {// Reading the Video
@@ -350,9 +352,13 @@ int main(int argc, char** argv)
     cap.read(first);
     cvtColor(first,frame_prev,COLOR_BGR2GRAY);
     homography_of_frames(frame_prev,cropped_frame_prev);
+    is_homo.pb(1);
+    is_homo.pb(1);
+    is_homo.pb(1);
     //Iterating Frame by Frame
     while (true)
     {
+        bool is_homo_done = false;
         Mat frame;
         bool done = cap.read(frame); // read a new frame from video 
 
@@ -376,10 +382,45 @@ int main(int argc, char** argv)
         Mat cropped_frame;
 
         // Applying Homography to the current frame
-        homography_of_frames(frame,cropped_frame);
           
         if (l%x==0){
             // Estimating Pixels changed in static and dynamic matrix
+            is_homo_done=1;
+            homography_of_frames(frame,cropped_frame);
+            for(int tteemmpp = is_homo.size()-1;tteemmpp>=0;tteemmpp--)
+            {
+                int jjj = is_homo.size()-tteemmpp;
+                if(is_homo[tteemmpp]==0)
+                {
+                    if(jjj==1)
+                    {
+                        Mat temp_frame;
+                        homography_of_frames(cropped_frame_prev,temp_frame);
+                        cropped_frame_prev=temp_frame;
+                        is_homo[tteemmpp]=1;
+            
+                    }
+                    else if(jjj==2)
+                    {
+                        Mat temp_frame;
+                        homography_of_frames(cropped_frame_2ndlast,temp_frame);
+                        cropped_frame_2ndlast=temp_frame; 
+                        is_homo[tteemmpp]=1;  
+                    }
+                    else if(jjj==3)
+                    {
+                        Mat temp_frame;
+                        homography_of_frames(cropped_frame_3rdlast,temp_frame);
+                        cropped_frame_3rdlast=temp_frame;   
+                        is_homo[tteemmpp]=1;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+            is_homo.pb(1);
             for(int i=0;i<emptyimg.rows;i++) {
                 for (int j=0;j<emptyimg.cols;j++){  
                     total_pixels++;
@@ -436,16 +477,23 @@ int main(int argc, char** argv)
             method1_queue.push_back(output_static);
             method1_dynamic.push_back(output_dynamic);
         }
+        if(is_homo_done==0)
+        {
+            is_homo.pb(0);
+        }
         // Updating States 
         l++;
         cropped_frame_3rdlast = cropped_frame_2ndlast;
         cropped_frame_2ndlast = cropped_frame_prev;
-        cropped_frame_prev = cropped_frame;
+        if(is_homo_done)
+            cropped_frame_prev = cropped_frame;
+        else
+            cropped_frame_prev=frame;
         // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }}
     time(&method1_end);
-    double base = double(baseline_end - baseline_start);
-    cout<<base<<endl;
+    //double base = double(baseline_end - baseline_start);
+    //cout<<base<<endl;
     double method1 = double(method1_end - method1_start);
     cout<<method1<<endl;
 
