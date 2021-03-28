@@ -2,6 +2,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
+//#include <pthread.h>
+#include <thread>
+#include <stdlib.h>
+#include <unistd.h>
 
 using namespace std;
 using namespace cv;
@@ -165,10 +169,40 @@ void homography_of_frames(Mat img,Mat&crop)
 
 }
 
+int total_pixels = 0; 
+int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
+int dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
+
+
+void frame_iterate(int start,int end,Mat emptyimg,int e_static,Mat cropped_frame_prev,Mat cropped_frame_2ndlast,Mat cropped_frame_3rdlast, int e_dynamic, Mat cropped_frame, int l){
+
+    for(int i=start;i<end;i++) {
+        for (int j=0;j<emptyimg.cols;j++){  
+            total_pixels++;
+            int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+            if (abs(a) > e_static){
+                static_pixels++;
+            }
+                
+            if (l>2){
+                int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+                int c = cropped_frame_2ndlast.at<uchar>(i,j) - cropped_frame_prev.at<uchar>(i,j);
+                int d = cropped_frame_3rdlast.at<uchar>(i,j) -cropped_frame_2ndlast.at<uchar>(i,j);
+                if (abs(b) > e_dynamic and abs(c) > e_dynamic and abs(d) > e_dynamic ){
+                    dynamic_pixels++;
+                }
+            }
+        }
+    }
+    // cout<<static_pixels<<endl;
+    // cout<<dynamic_pixels<<endl;
+    // cout<<total_pixels<<endl;
+}
+
 int main(int argc, char** argv)
 {
 
-    if(argc < 3)
+    if(argc < 4)
     {
         cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
         cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
@@ -176,7 +210,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    if(argc > 3)
+    if(argc > 4)
     {
         cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
         cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
@@ -184,8 +218,10 @@ int main(int argc, char** argv)
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
-    time_t bas,bae;
+    
+    int num = stoi(argv[3]);
     // Reading the Video
+    time_t method3_start,method3_end;
     VideoCapture cap(argv[2]); 
 
     // if not success, exit program
@@ -198,7 +234,7 @@ int main(int argc, char** argv)
     // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
     empty_image(argv[1], emptyimg);
-    time(&bas);
+    time(&method3_start);
     // Storing Previous Frames
     Mat cropped_frame_prev,cropped_frame_2ndlast,cropped_frame_3rdlast;
 
@@ -216,12 +252,13 @@ int main(int argc, char** argv)
     {
         Mat frame;
         bool done = cap.read(frame); // read a new frame from video 
-
-        int total_pixels = 0; 
-        int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
-        int dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
+        std::vector<std::thread> threads;
         int e_static = 35; // Error for estimating queue density (Found Experimentally)
         int e_dynamic = 0;  // error for estimating dynamic density (Found Experimentally)
+        total_pixels = 0; 
+        static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
+        dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
+
 
         //Breaking the while loop at the end of the video
         if (done == false) 
@@ -238,25 +275,19 @@ int main(int argc, char** argv)
 
         // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
-          
+        int start = 0;
+        int end = emptyimg.rows/num;
         // Estimating Pixels changed in static and dynamic matrix
-        for(int i=0;i<emptyimg.rows;i++) {
-            for (int j=0;j<emptyimg.cols;j++){  
-                total_pixels++;
-                int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                if (abs(a) > e_static){
-                    static_pixels++;
-                }
-                    
-                if (l>2){
-                    int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                    int c = cropped_frame_2ndlast.at<uchar>(i,j) - cropped_frame_prev.at<uchar>(i,j);
-                    int d = cropped_frame_3rdlast.at<uchar>(i,j) -cropped_frame_2ndlast.at<uchar>(i,j);
-                    if (abs(b) > e_dynamic and abs(c) > e_dynamic and abs(d) > e_dynamic ){
-                        dynamic_pixels++;
-                    }
-                }
+        for (int i = 0;i<num;i++){
+            threads.push_back(std::thread(frame_iterate, start, end, emptyimg,e_static,cropped_frame_prev,cropped_frame_2ndlast,cropped_frame_3rdlast,e_dynamic,cropped_frame,l));
+            start = end;
+            end += emptyimg.rows/num;
+            if (i==num-2){
+                end = emptyimg.rows;
             }
+        }
+        for (auto &th : threads) {
+            th.join();
         }
 
         // calculating queue and dynamic density
@@ -301,9 +332,12 @@ int main(int argc, char** argv)
         
         // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
-    time(&bae);
-    cout<<double(bae-bas)<<endl;
+    time(&method3_end);
+    double method3 = double(method3_end - method3_start);
+    cout<<method3<<endl;
 
     return 0;
     
 }
+
+
