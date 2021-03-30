@@ -6,7 +6,7 @@ double error_value(double x,bool which)
 {
 	if(which)
 	{
-		return abs(x-dynamic_set[i]);
+		return double(abs(x-dynamic_set[i]));
 	}
 	return abs(x-static_set[i]);
 }
@@ -30,14 +30,15 @@ int main(int argc, char** argv)
       	string temp;
       	while(getline(check1, temp, ','))
     	{
-        	tokens.push_back(temp);
+    		tokens.push_back(temp);
     	}
     	double static_queue,dynamic_queue;
-    	static_queue = stoi(tokens[1]);
-    	dynamic_queue = stoi(tokens[2]);
+    	static_queue = stod(tokens[1]);
+    	dynamic_queue = stod(tokens[2]);
     	static_set.push_back(static_queue);
     	dynamic_set.push_back(dynamic_queue);
 	}
+	fin.close();
 	fin.open(argv[1]);
 	temp=false;
 	while(getline(fin,line_of_file))
@@ -55,13 +56,13 @@ int main(int argc, char** argv)
         	tokens.push_back(temp);
     	}
     	double static_queue,dynamic_queue;
-    	static_queue = stoi(tokens[1]);
-    	dynamic_queue = stoi(tokens[2]);
+    	static_queue = stod(tokens[1]);
+    	dynamic_queue = stod(tokens[2]);
     	error_static+=error_value(static_queue,0);
     	error_dynamic+=error_value(dynamic_queue,1);
     	i++;
 	}
-	cout<<"static queue error is : "<<error_static<<endl;
-	cout<<"dynamic queue error is : "<<error_dynamic<<endl;
+	cout<<"static queue error is : "<<(double)(error_static/static_set.size())<<endl;
+	cout<<"dynamic queue error is : "<<(double)(error_dynamic/dynamic_set.size())<<endl;
 
 }

@@ -191,6 +191,11 @@ int main(int argc, char** argv)
     }
     int x = stoi(argv[3]);
     int y = stoi(argv[4]);
+    if(x<=0 or y<=0)
+    {
+        cout<< "Resolution dimensions has to be greater than 0"<<endl;
+        throw std::invalid_argument( "Wrong Command Line Argument");
+    }
     Size size(x,y);
     Mat dst;
 
@@ -208,7 +213,7 @@ int main(int argc, char** argv)
     Mat emptyimg;
     time_t method2_start,method2_end;
     empty_image(argv[1], emptyimg);
-    resize(emptyimg,dst,size,0,0,INTER_CUBIC);
+    resize(emptyimg,dst,size,0,0,INTER_NEAREST);
     emptyimg = dst.clone();
     time(&method2_start);
     // Storing Previous Frames
@@ -254,7 +259,7 @@ int main(int argc, char** argv)
 
         // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
-        resize(cropped_frame,dst,size,0,0,INTER_CUBIC);
+        resize(cropped_frame,dst,size,0,0,INTER_NEAREST);
         cropped_frame = dst.clone();
           
         // Estimating Pixels changed in static and dynamic matrix
@@ -322,7 +327,8 @@ int main(int argc, char** argv)
     time(&method2_end);
     double method2 = double(method2_end-method2_start);
     cout<<method2<<endl;
-
+    cout<<endl;
+    cout<<"total pixels" << x*y<<endl;
     return 0;
     
 }

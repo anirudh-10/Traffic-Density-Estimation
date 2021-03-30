@@ -191,6 +191,11 @@ int main(int argc, char** argv)
     }
     is_homo.reserve(10000);
     int x = stoi(argv[3]);
+    if(x<=0)
+    {
+        cout<< "value of frame skip has to be greater than 0"<<endl;
+        throw std::invalid_argument( "Wrong Command Line Argument");
+    }
     vector<float> baseline_queue,baseline_dynamic,method1_queue,method1_dynamic,method1_queue_final,method1_dynamic_final;
     time_t baseline_start,baseline_end,method1_start,method1_end;
     // Creating Matrix for Empty(Background) Image according to points chosen by user
@@ -362,10 +367,17 @@ int main(int argc, char** argv)
     std::ofstream myfile;
     myfile.open ("method1.csv");
     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-
+    cout<<"Frame no: "<<1<<"    Queue density: "<<0<<"    dynamic density: "<<0<<endl;
+    cout<<"Frame no: "<<2<<"    Queue density: "<<0<<"    dynamic density: "<<0<<endl;
+    cout<<"Frame no: "<<3<<"    Queue density: "<<0<<"    dynamic density: "<<0<<endl;
+    myfile<<1<<","<<0<<","<<0<<endl;
+    myfile<<2<<","<<0<<","<<0<<endl;
+    myfile<<3<<","<<0<<","<<0<<endl;
+    
     //Iterating Frame by Frame
     while (true)
     {
+        l++;
         bool is_homo_done = false;
         Mat frame;
         bool done = cap.read(frame); // read a new frame from video 
@@ -491,7 +503,7 @@ int main(int argc, char** argv)
             is_homo.pb(0);
         }
         // Updating States 
-        l++;
+        
         cropped_frame_3rdlast = cropped_frame_2ndlast;
         cropped_frame_2ndlast = cropped_frame_prev;
         if(is_homo_done)

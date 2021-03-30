@@ -2,7 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
-//#include <pthread.h>
+#include <pthread.h>
 #include <thread>
 #include <stdlib.h>
 #include <unistd.h>
@@ -21,6 +21,7 @@ bool comp(pair<int,int> x,pair<int,int> y)
     return false;
 }
 
+vector<double> file_output(10000);
 // Global Vectors for storing points
 vector<Point2f> source_pts,destination_pts;
 vector<pair<int,int>> source_pts_temp,destination_pts_temp;
@@ -173,12 +174,43 @@ void homography_of_frames(Mat img,Mat&crop)
 
 }
 
-int total_pixels = 0; 
-int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
-int dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
+struct thread_data{
+    int start;
+    int end;
+    int total_pixels;
+    int static_pixels;
+    int dynamic_pixels;
+    Mat emptyimg;
+    int e_static;
+    Mat cropped_frame_prev;
+    Mat cropped_frame_2ndlast;
+    Mat cropped_frame_3rdlast;
+    int e_dynamic;
+    Mat cropped_frame;
+    int l;
+    bool os;
 
+};
+//int start,int end,Mat emptyimg,int e_static,Mat cropped_frame_prev,Mat cropped_frame_2ndlast,Mat cropped_frame_3rdlast, int e_dynamic, Mat cropped_frame, int l
+void *frame_iterate(void *input){
 
-void frame_iterate(int start,int end,Mat emptyimg,int e_static,Mat cropped_frame_prev,Mat cropped_frame_2ndlast,Mat cropped_frame_3rdlast, int e_dynamic, Mat cropped_frame, int l){
+    struct thread_data *my_data;
+    my_data = (struct thread_data *) input;
+
+    int start = my_data->start;
+    int end = my_data->end;
+    int total_pixels = my_data->total_pixels;
+    int static_pixels = my_data->static_pixels;
+    int dynamic_pixels = my_data->dynamic_pixels;
+    Mat emptyimg = my_data->emptyimg;
+    int e_static = my_data->e_static;
+    Mat cropped_frame_prev = my_data->cropped_frame_prev;
+    Mat cropped_frame_2ndlast = my_data->cropped_frame_2ndlast;
+    Mat cropped_frame_3rdlast = my_data->cropped_frame_3rdlast;
+    int e_dynamic = my_data->e_dynamic;
+    Mat cropped_frame = my_data->cropped_frame;
+    int l = my_data->l;
+    bool os = my_data->os;
 
     for(int i=start;i<end;i++) {
         for (int j=0;j<emptyimg.cols;j++){  
@@ -188,7 +220,7 @@ void frame_iterate(int start,int end,Mat emptyimg,int e_static,Mat cropped_frame
                 static_pixels++;
             }
                 
-            if (l>2){
+            if (l>2 && os){
                 int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
                 int c = cropped_frame_2ndlast.at<uchar>(i,j) - cropped_frame_prev.at<uchar>(i,j);
                 int d = cropped_frame_3rdlast.at<uchar>(i,j) -cropped_frame_2ndlast.at<uchar>(i,j);
@@ -198,6 +230,9 @@ void frame_iterate(int start,int end,Mat emptyimg,int e_static,Mat cropped_frame
             }
         }
     }
+    my_data->total_pixels = total_pixels;
+    my_data->static_pixels = static_pixels;
+    my_data->dynamic_pixels = dynamic_pixels;
     // cout<<static_pixels<<endl;
     // cout<<dynamic_pixels<<endl;
     // cout<<total_pixels<<endl;
@@ -249,22 +284,23 @@ int main(int argc, char** argv)
      // std::ofstream myfile;
      // myfile.open ("example3.csv");
      // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+
     std::ofstream myfile;
     myfile.open ("method3.csv");
     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-    vector<pair<int,int>> file_output(10000);
-
+    
     //Iterating Frame by Frame
     while (true)
     {
         Mat frame;
         bool done = cap.read(frame); // read a new frame from video 
-        std::vector<std::thread> threads;
+        pthread_t threads[num];
+        struct thread_data input[num];
         int e_static = 35; // Error for estimating queue density (Found Experimentally)
         int e_dynamic = 0;  // error for estimating dynamic density (Found Experimentally)
-        total_pixels = 0; 
-        static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
-        dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
+        int total_pixels = 0; 
+        int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
+        int dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
 
 
         //Breaking the while loop at the end of the video
@@ -284,17 +320,43 @@ int main(int argc, char** argv)
         homography_of_frames(frame,cropped_frame);
         int start = 0;
         int end = emptyimg.rows/num;
-        // Estimating Pixels changed in static and dynamic matrix
-        for (int i = 0;i<num;i++){
-            threads.push_back(std::thread(frame_iterate, start, end, emptyimg,e_static,cropped_frame_prev,cropped_frame_2ndlast,cropped_frame_3rdlast,e_dynamic,cropped_frame,l));
+        for(int i=0;i<num;i++){
+            input[i].emptyimg = emptyimg;
+            input[i].e_static = e_static;
+            input[i].cropped_frame_prev = cropped_frame_prev;
+            input[i].cropped_frame_2ndlast = cropped_frame_2ndlast;
+            input[i].cropped_frame_3rdlast = cropped_frame_3rdlast;
+            input[i].e_dynamic = e_dynamic;
+            input[i].cropped_frame = cropped_frame;
+            input[i].l = l;
+            input[i].total_pixels = total_pixels;
+            input[i].static_pixels = static_pixels;
+            input[i].dynamic_pixels = dynamic_pixels;
+            input[i].start = start;
+            input[i].end = end;
+            input[i].os = true;
             start = end;
             end += emptyimg.rows/num;
             if (i==num-2){
                 end = emptyimg.rows;
-            }
+            }            
         }
-        for (auto &th : threads) {
-            th.join();
+        
+        // Estimating Pixels changed in static and dynamic matrix
+        for (int i = 0;i<num;i++){
+
+            pthread_create(&threads[i], NULL, frame_iterate, (void *)&input[i]);
+            
+        }
+        for (int i = 0;i<num;i++){
+
+            pthread_join(threads[i], NULL);    
+        }
+
+        for (int i = 0;i<num;i++){
+            total_pixels+=input[i].total_pixels;
+            static_pixels+=input[i].static_pixels;
+            dynamic_pixels+=input[i].dynamic_pixels;
         }
 
         // calculating queue and dynamic density
@@ -319,16 +381,27 @@ int main(int argc, char** argv)
                 output_static=output_dynamic+0.05;
                 break;
             }
+            pthread_t threads2[num];
+            for (int i = 0;i<num;i++){
+                input[i].total_pixels = 0;
+                input[i].static_pixels = 0;
+                input[i].os = false;
+                input[i].e_static = e_static;
+            }
             static_pixels=0;
             total_pixels=0;
-            for(int i=0;i<emptyimg.rows;i++) {
-                for (int j=0;j<emptyimg.cols;j++){  
-                    total_pixels++;
-                    int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                    if (abs(a) > e_static){
-                        static_pixels++;
-                    }
-                }
+            for (int i = 0;i<num;i++){
+
+                pthread_create(&threads2[i], NULL, frame_iterate, (void *)&input[i]);
+                
+            }
+            for (int i = 0;i<num;i++){
+
+                pthread_join(threads2[i], NULL);    
+            }
+            for (int i = 0;i<num;i++){
+                total_pixels+=input[i].total_pixels;
+                static_pixels+=input[i].static_pixels;            
             }
             output_static = ((float)static_pixels)/((float)total_pixels);
         }
@@ -340,7 +413,9 @@ int main(int argc, char** argv)
             int x = file_output.size();
             file_output.resize(2*x);
         }
-        file_output[l]=make_pair(output_static,output_dynamic);
+    
+        //mtx.unlock();
+        file_output[l]=output_static;
         
         // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
@@ -350,10 +425,9 @@ int main(int argc, char** argv)
     int tteemmpp=1;
     for(auto x:file_output)
     {
-        myfile<<tteemmpp<<","<<x.first<<","<<x.second<<",\n";
+        myfile<<tteemmpp<<","<<x<<","<<0<<",\n";
         tteemmpp++;
     }
-
     return 0;
     
 }

@@ -21,6 +21,7 @@ bool comp(pair<int,int> x,pair<int,int> y)
     return false;
 }
 
+vector<double> file_output(10000);
 // Global Vectors for storing points
 vector<Point2f> source_pts,destination_pts;
 vector<pair<int,int>> source_pts_temp,destination_pts_temp;
@@ -99,7 +100,12 @@ void empty_image(string s, Mat&crop)
         throw std::invalid_argument( "Image Closed before selecting 4 points");
         return;
     }
-     
+    
+    source_pts_temp[0]=make_pair(464,1008);
+    source_pts_temp[1]=make_pair(997,213);
+    source_pts_temp[2]=make_pair(1265,197);
+    source_pts_temp[3]=make_pair(1513,1012);
+    
     // Ordering the Points Clicked by the user according to (Top Left,Top Right,Bottom Left,Bottom Right)
     sort(source_pts_temp.begin(),source_pts_temp.end(),comp);
     sort(source_pts_temp.begin(),source_pts_temp.begin()+2);
@@ -174,17 +180,11 @@ struct thread_data{
     int end;
     int total_pixels;
     int static_pixels;
-    int dynamic_pixels;
     Mat emptyimg;
     int e_static;
     Mat cropped_frame_prev;
-    Mat cropped_frame_2ndlast;
-    Mat cropped_frame_3rdlast;
-    int e_dynamic;
     Mat cropped_frame;
     int l;
-    bool os;
-
 };
 //int start,int end,Mat emptyimg,int e_static,Mat cropped_frame_prev,Mat cropped_frame_2ndlast,Mat cropped_frame_3rdlast, int e_dynamic, Mat cropped_frame, int l
 void *frame_iterate(void *input){
@@ -196,17 +196,12 @@ void *frame_iterate(void *input){
     int end = my_data->end;
     int total_pixels = my_data->total_pixels;
     int static_pixels = my_data->static_pixels;
-    int dynamic_pixels = my_data->dynamic_pixels;
     Mat emptyimg = my_data->emptyimg;
     int e_static = my_data->e_static;
     Mat cropped_frame_prev = my_data->cropped_frame_prev;
-    Mat cropped_frame_2ndlast = my_data->cropped_frame_2ndlast;
-    Mat cropped_frame_3rdlast = my_data->cropped_frame_3rdlast;
-    int e_dynamic = my_data->e_dynamic;
     Mat cropped_frame = my_data->cropped_frame;
     int l = my_data->l;
-    bool os = my_data->os;
-
+    
     for(int i=start;i<end;i++) {
         for (int j=0;j<emptyimg.cols;j++){  
             total_pixels++;
@@ -214,20 +209,10 @@ void *frame_iterate(void *input){
             if (abs(a) > e_static){
                 static_pixels++;
             }
-                
-            if (l>2 && os){
-                int b = cropped_frame_prev.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-                int c = cropped_frame_2ndlast.at<uchar>(i,j) - cropped_frame_prev.at<uchar>(i,j);
-                int d = cropped_frame_3rdlast.at<uchar>(i,j) -cropped_frame_2ndlast.at<uchar>(i,j);
-                if (abs(b) > e_dynamic and abs(c) > e_dynamic and abs(d) > e_dynamic ){
-                    dynamic_pixels++;
-                }
-            }
         }
     }
     my_data->total_pixels = total_pixels;
     my_data->static_pixels = static_pixels;
-    my_data->dynamic_pixels = dynamic_pixels;
     // cout<<static_pixels<<endl;
     // cout<<dynamic_pixels<<endl;
     // cout<<total_pixels<<endl;
@@ -236,7 +221,7 @@ void *frame_iterate(void *input){
 int main(int argc, char** argv)
 {
 
-    if(argc < 4)
+    if(argc < 5)
     {
         cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
         cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
@@ -244,7 +229,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    if(argc > 4)
+    if(argc > 5)
     {
         cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
         cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
@@ -254,6 +239,12 @@ int main(int argc, char** argv)
     }
     
     int num = stoi(argv[3]);
+    int x = stoi(argv[4]);
+    if(x<=0)
+    {
+        cout<< "value of frame skip has to be greater than 0"<<endl;
+        throw std::invalid_argument( "Wrong Command Line Argument");
+    }
     // Reading the Video
     time_t method3_start,method3_end;
     VideoCapture cap(argv[2]); 
@@ -270,7 +261,7 @@ int main(int argc, char** argv)
     empty_image(argv[1], emptyimg);
     time(&method3_start);
     // Storing Previous Frames
-    Mat cropped_frame_prev,cropped_frame_2ndlast,cropped_frame_3rdlast;
+    Mat cropped_frame_prev;
 
     // Counting Number of frames
     int l = 0;
@@ -280,126 +271,97 @@ int main(int argc, char** argv)
      // myfile.open ("example3.csv");
      // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
 
-
+    std::ofstream myfile;
+    myfile.open ("method1_static.csv");
+    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+    
     //Iterating Frame by Frame
     while (true)
     {
+        l++;
         Mat frame;
         bool done = cap.read(frame); // read a new frame from video 
-        pthread_t threads[num];
-        struct thread_data input[num];
-        int e_static = 35; // Error for estimating queue density (Found Experimentally)
-        int e_dynamic = 0;  // error for estimating dynamic density (Found Experimentally)
-        int total_pixels = 0; 
-        int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
-        int dynamic_pixels = 0; // Counting Number of pixels changed in the last 3 frames
-
-
-        //Breaking the while loop at the end of the video
-        if (done == false) 
-        {
-            cout << "Found the end of the video" << endl;
-            break;
-        }
-
-        //Converting Video Frame to grayscale
-        Mat temp_gray;
-        cvtColor(frame, temp_gray, COLOR_BGR2GRAY);
-        frame = temp_gray;
-        Mat cropped_frame;
-
-        // Applying Homography to the current frame
-        homography_of_frames(frame,cropped_frame);
-        int start = 0;
-        int end = emptyimg.rows/num;
-        for(int i=0;i<num;i++){
-            input[i].emptyimg = emptyimg;
-            input[i].e_static = e_static;
-            input[i].cropped_frame_prev = cropped_frame_prev;
-            input[i].cropped_frame_2ndlast = cropped_frame_2ndlast;
-            input[i].cropped_frame_3rdlast = cropped_frame_3rdlast;
-            input[i].e_dynamic = e_dynamic;
-            input[i].cropped_frame = cropped_frame;
-            input[i].l = l;
-            input[i].total_pixels = total_pixels;
-            input[i].static_pixels = static_pixels;
-            input[i].dynamic_pixels = dynamic_pixels;
-            input[i].start = start;
-            input[i].end = end;
-            input[i].os = true;
-            start = end;
-            end += emptyimg.rows/num;
-            if (i==num-2){
-                end = emptyimg.rows;
-            }            
-        }
-        
-        // Estimating Pixels changed in static and dynamic matrix
-        for (int i = 0;i<num;i++){
-
-            pthread_create(&threads[i], NULL, frame_iterate, (void *)&input[i]);
             
-        }
-        for (int i = 0;i<num;i++){
-
-            pthread_join(threads[i], NULL);    
-        }
-
-        for (int i = 0;i<num;i++){
-            total_pixels+=input[i].total_pixels;
-            static_pixels+=input[i].static_pixels;
-            dynamic_pixels+=input[i].dynamic_pixels;
-        }
-
-        // calculating queue and dynamic density
-        float output_static = ((float)static_pixels)/((float)total_pixels);
-        float output_dynamic = ((float)dynamic_pixels)/((float)total_pixels);
-
-        
-        cout<<fixed<<setprecision(3);
-
-        // Updating States 
-        l++;
-        cropped_frame_3rdlast = cropped_frame_2ndlast;
-        cropped_frame_2ndlast = cropped_frame_prev;
-        cropped_frame_prev = cropped_frame;
-
-        // Improving Queue Density
-        while(output_dynamic>=output_static or (output_static-output_dynamic<0.001 and output_dynamic<=output_static))
+        if(l%x==0)
         {
-            e_static/=1.15;
-            if(e_static<1.5)
+            pthread_t threads[num];
+            struct thread_data input[num];
+            int e_static = 35; // Error for estimating queue density (Found Experimentally)
+            int total_pixels = 0; 
+            int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
+            
+
+            //Breaking the while loop at the end of the video
+            if (done == false) 
             {
-                output_static=output_dynamic+0.05;
+                cout << "Found the end of the video" << endl;
                 break;
             }
-            pthread_t threads2[num];
-            for (int i = 0;i<num;i++){
-                input[i].total_pixels = 0;
-                input[i].static_pixels = 0;
-                input[i].os = false;
+
+            //Converting Video Frame to grayscale
+            Mat temp_gray;
+            cvtColor(frame, temp_gray, COLOR_BGR2GRAY);
+            frame = temp_gray;
+            Mat cropped_frame;
+
+            // Applying Homography to the current frame
+            homography_of_frames(frame,cropped_frame);
+            int start = 0;
+            int end = emptyimg.rows/num;
+            for(int i=0;i<num;i++){
+                input[i].emptyimg = emptyimg;
                 input[i].e_static = e_static;
+                input[i].cropped_frame_prev = cropped_frame_prev;
+                input[i].cropped_frame = cropped_frame;
+                input[i].l = l;
+                input[i].total_pixels = total_pixels;
+                input[i].static_pixels = static_pixels;
+                input[i].start = start;
+                input[i].end = end;
+                start = end;
+                end += emptyimg.rows/num;
+                if (i==num-2){
+                    end = emptyimg.rows;
+                }            
             }
-            static_pixels=0;
-            total_pixels=0;
+            
+            // Estimating Pixels changed in static and dynamic matrix
             for (int i = 0;i<num;i++){
 
-                pthread_create(&threads2[i], NULL, frame_iterate, (void *)&input[i]);
+                pthread_create(&threads[i], NULL, frame_iterate, (void *)&input[i]);
                 
             }
             for (int i = 0;i<num;i++){
 
-                pthread_join(threads2[i], NULL);    
+                pthread_join(threads[i], NULL);    
             }
+
             for (int i = 0;i<num;i++){
                 total_pixels+=input[i].total_pixels;
-                static_pixels+=input[i].static_pixels;            
+                static_pixels+=input[i].static_pixels;
             }
-            output_static = ((float)static_pixels)/((float)total_pixels);
+
+            // calculating queue and dynamic density
+            float output_static = ((float)static_pixels)/((float)total_pixels);
+
+            
+            cout<<fixed<<setprecision(3);
+            cropped_frame_prev = cropped_frame;
+            // Outputting the Values on the terminal
+            cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<endl;
+            if(l>=file_output.size())
+            {
+                int xxx = file_output.size();
+                file_output.resize(2*xxx);
+            }
+    
+            //mtx.unlock();
+            file_output[l]=output_static;
         }
 
-        // Outputting the Values on the terminal
-        cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
+        // Updating States 
+        
+
 
         
         // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
@@ -407,7 +369,22 @@ int main(int argc, char** argv)
     time(&method3_end);
     double method3 = double(method3_end - method3_start);
     cout<<method3<<endl;
-
+    vector<double> file_output_final;
+    for(int i = 1 ; i < l;i++)
+    {
+        for(int j = i ; j < i+x ; j++)
+        {
+            file_output_final.push_back(file_output[i]);
+               
+        }
+    }
+    int tteemmpp=1;
+    for(int i = 1 ; i < l;i++)
+    {
+       
+        myfile<<tteemmpp<<","<<file_output_final[i]<<","<<0<<",\n";
+        tteemmpp++;
+    }
     return 0;
     
 }
