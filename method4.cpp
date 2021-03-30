@@ -303,7 +303,7 @@ int main(int argc, char** argv)
                 pthread_create(&threads[i], NULL, frame_iterate, (void *)&input[i]);
                 
             }
-            for (int i = 0;i<num;i++){
+            for (int i = 0;i<breakpoint;i++){
 
                 pthread_join(threads[i], NULL);    
             }

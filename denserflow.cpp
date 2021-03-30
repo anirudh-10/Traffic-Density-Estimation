@@ -266,6 +266,19 @@ int main(int argc, char** argv)
         if (keyboard == 'q' || keyboard == 27)
             break;
         
+        for(int i=0;i<emptyimg.rows;i++) {
+            for (int j=0;j<emptyimg.cols;j++){  
+                total_pixels++;
+                int a = gray.at<uchar>(i,j);
+                if (abs(a) > e_dynamic){
+                    dynamic_pixels++;
+                }
+            }
+        }
+        float dynamic_density = ((float)dynamic_pixels)/((float)total_pixels);
+        cout<<"Frame no: "<<l<<"    Queue density: "<<dynamic_density<<endl;
+
+        
 
         // Estimating Pixels changed in static and dynamic matrix
 
