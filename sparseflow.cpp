@@ -185,7 +185,6 @@ int main(int argc, char** argv)
         return -1;
     }
     time_t bas,bae;
-    
     // Reading the Video
     VideoCapture cap(argv[2]); 
 
@@ -199,25 +198,49 @@ int main(int argc, char** argv)
     // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
     empty_image(argv[1], emptyimg);
-
+    time(&bas);
     // Storing Previous Frames
     Mat cropped_frame_prev;
-    time(&bas);
-    
+
     // Counting Number of frames
-    int l = 0;
+    int l = 1;
+
+    vector<Scalar> colors;
+    RNG rng;
+    for(int i = 0; i < 100; i++)
+    {
+        int r = rng.uniform(0, 256);
+        int g = rng.uniform(0, 256);
+        int b = rng.uniform(0, 256);
+        colors.push_back(Scalar(r,g,b));
+    }
+
+    Mat first,frame_prev,mask;
     
-    Mat first,frame_prev;
+    vector<uchar> status;
+    vector<float> err;
+    TermCriteria criteria = TermCriteria((TermCriteria::COUNT) + (TermCriteria::EPS), 10, 0.03);
+    vector<Point2f> corners;
+    int maxCorners = 100,
+        minDistance = 7,
+        blockSize = 7;
+    double qualityLevel = 0.3;
+    
     cap.read(first);
     cvtColor(first,frame_prev,COLOR_BGR2GRAY);
     homography_of_frames(frame_prev,cropped_frame_prev);
     
+    //goodFeaturesToTrack(cropped_frame_prev, corners, maxCorners, qualityLevel, minDistance, Mat(), blockSize,false,0.04);
+    
+    mask = Mat::zeros(cropped_frame_prev.size(), first.type());
+    //prevPts = corners;
+    
     //Iterating Frame by Frame
     destroyAllWindows();
-    
     while (true)
     {
         Mat frame;
+        vector<Point2f> prevPts, nextPts;
         bool done = cap.read(frame); // read a new frame from video 
 
         int total_pixels = 0; 
@@ -238,51 +261,72 @@ int main(int argc, char** argv)
 
         // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
+        
+        goodFeaturesToTrack(cropped_frame_prev, corners, maxCorners, qualityLevel, minDistance, Mat(), blockSize,false,0.04);
+    
+        mask = Mat::zeros(cropped_frame_prev.size(), first.type());
+        prevPts = corners;
 
-        Mat flow(cropped_frame_prev.size(),cropped_frame_prev.type());
-        calcOpticalFlowFarneback(cropped_frame_prev, cropped_frame, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
+
+        //Mat flow(cropped_frame_prev.size(),cropped_frame_prev.type());
+        calcOpticalFlowPyrLK(cropped_frame_prev, cropped_frame, prevPts, nextPts, status, err, Size(15,15), 2, criteria);
+        vector<Point2f> good_new;
+
+        for(uint i = 0; i < prevPts.size(); i++)
+        {
+            // Select good points
+            if(status[i] == 1) {
+                good_new.push_back(nextPts[i]);
+                // Draw the tracks
+                line(mask,nextPts[i], prevPts[i], colors[i], 2);
+                //circle(mask, nextPts[i], 5, colors[i], -1);
+            }
+        }
+        Mat a1,img;
+        a1 = mask.clone();
+        cvtColor(a1,img,COLOR_BGR2GRAY);
+        
 
         // visualization
-        Mat flow_parts[2];
-        split(flow, flow_parts);
-        Mat magnitude, angle, magn_norm;
-        cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
-        normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);
-        angle *= ((1.f / 360.f) * (180.f / 255.f));
-        
-        //build hsv image
-        Mat _hsv[3], hsv, hsv8, bgr,gray;
-        _hsv[0] = angle;
-        _hsv[1] = Mat::ones(angle.size(), CV_32F);
-        _hsv[2] = magn_norm;
-        merge(_hsv, 3, hsv);
-        hsv.convertTo(hsv8, CV_8U, 255.0);
-
-        cvtColor(hsv8, bgr, COLOR_HSV2BGR);
-        cvtColor(bgr,gray, COLOR_BGR2GRAY);
-
-        // imshow("frame2", gray);
-        // int keyboard = waitKey(30);
-        // if (keyboard == 'q' || keyboard == 27)
-        //     break;
+        // Mat flow_parts[2];
+        // split(flow, flow_parts);
+        // Mat magnitude, angle, magn_norm;
+        // cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
+        // normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);
+        // angle *= ((1.f / 360.f) * (180.f / 255.f));
+        // //build hsv image
+        // Mat _hsv[3], hsv, hsv8, bgr,gray;
+        // _hsv[0] = angle;
+        // _hsv[1] = Mat::ones(angle.size(), CV_32F);
+        // _hsv[2] = magn_norm;
+        // merge(_hsv, 3, hsv);
+        // hsv.convertTo(hsv8, CV_8U, 255.0);
+        // cvtColor(hsv8, bgr, COLOR_HSV2BGR);
+        // cvtColor(bgr,gray, COLOR_BGR2GRAY);
+        imshow("frame2", img);
+        int keyboard = waitKey(30);
+        if (keyboard == 'q' || keyboard == 27)
+            break;
         
         for(int i=0;i<emptyimg.rows;i++) {
             for (int j=0;j<emptyimg.cols;j++){  
                 total_pixels++;
-                int a = gray.at<uchar>(i,j);
+                int a = img.at<uchar>(i,j);
                 if (abs(a) > e_dynamic){
                     dynamic_pixels++;
                 }
             }
         }
-        float dynamic_density = ((float)dynamic_pixels)/((float)total_pixels);
-        cout<<"Frame no: "<<l<<"    dynamic density: "<<dynamic_density<<endl;
-        
+        float dynamic_density = 50*((float)dynamic_pixels)/((float)total_pixels);
+
         l++;
-        cropped_frame_prev = cropped_frame; 
+        prevPts = good_new;
+        cropped_frame_prev = cropped_frame.clone();
+        cout<<"Frame no: "<<l<<"    sparse density: "<<dynamic_density<<endl;
+
     }
     time(&bae);
-    cout<<double(bae-bas)<<endl;    
+    cout<<double(bae-bas)<<endl; 
 
     return 0;
     
