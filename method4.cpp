@@ -6,10 +6,14 @@
 #include <thread>
 #include <stdlib.h>
 #include <unistd.h>
+#include <mutex>
 
 using namespace std;
 using namespace cv;
 // Comparator Function for sorting of Source points( As Clicked By User)
+mutex mtx; 
+vector<int> file_output(10000);
+
 bool comp(pair<int,int> x,pair<int,int> y)
 {
     if(x.second<y.second)
@@ -99,6 +103,10 @@ void empty_image(string s, Mat&crop)
         throw std::invalid_argument( "Image Closed before selecting 4 points");
         return;
     }
+    source_pts_temp[0]=make_pair(464,1008);
+    source_pts_temp[1]=make_pair(997,213);
+    source_pts_temp[2]=make_pair(1265,197);
+    source_pts_temp[3]=make_pair(1513,1012);
      
     // Ordering the Points Clicked by the user according to (Top Left,Top Right,Bottom Left,Bottom Right)
     sort(source_pts_temp.begin(),source_pts_temp.end(),comp);
@@ -213,9 +221,18 @@ void * frame_iterate(void * input){
     float output_static = ((float)static_pixels)/((float)total_pixels);
     
     // Improving Queue Density
-
+    //mtx.lock();
     // Outputting the Values on the terminal
     cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<endl;
+    if(l>=file_output.size())
+    {
+            int x = file_output.size();
+            file_output.resize(2*x);
+    }
+    
+    //mtx.unlock();
+    file_output[l]=output_static;
+        
 }
 
 
@@ -263,7 +280,10 @@ int main(int argc, char** argv)
      // std::ofstream myfile;
      // myfile.open ("example3.csv");
      // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-
+    std::ofstream myfile;
+    myfile.open ("method4.csv");
+    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+    
     //cout<<fixed<<setprecision(3);
     //Iterating Frame by Frame
     while (true)
@@ -319,7 +339,12 @@ int main(int argc, char** argv)
     }
     time(&bae);
     cout<<double(bae-bas)<<endl;
-
+    int tteemmpp=1;
+    for(auto x:file_output)
+    {
+        myfile<<tteemmpp<<","<<x<<","<<0<<",\n";
+        tteemmpp++;
+    }
     return 0;
     
 }
