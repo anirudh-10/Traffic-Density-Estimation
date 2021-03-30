@@ -95,6 +95,11 @@ void empty_image(string s, Mat&crop)
         throw std::invalid_argument( "Image Closed before selecting 4 points");
         return;
     }
+    source_pts_temp[0]=make_pair(464,1008);
+    source_pts_temp[1]=make_pair(997,213);
+    source_pts_temp[2]=make_pair(1265,197);
+    source_pts_temp[3]=make_pair(1513,1012);
+    
      
     // Ordering the Points Clicked by the user according to (Top Left,Top Right,Bottom Left,Bottom Right)
     sort(source_pts_temp.begin(),source_pts_temp.end(),comp);
@@ -203,7 +208,7 @@ int main(int argc, char** argv)
     Mat emptyimg;
     time_t method2_start,method2_end;
     empty_image(argv[1], emptyimg);
-    resize(emptyimg,dst,size);
+    resize(emptyimg,dst,size,0,0,INTER_CUBIC);
     emptyimg = dst.clone();
     time(&method2_start);
     // Storing Previous Frames
@@ -217,6 +222,9 @@ int main(int argc, char** argv)
      // myfile.open ("example3.csv");
      // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
 
+    std::ofstream myfile;
+    myfile.open ("method2.csv");
+    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
 
     //Iterating Frame by Frame
     while (true)
@@ -246,7 +254,7 @@ int main(int argc, char** argv)
 
         // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
-        resize(cropped_frame,dst,size);
+        resize(cropped_frame,dst,size,0,0,INTER_CUBIC);
         cropped_frame = dst.clone();
           
         // Estimating Pixels changed in static and dynamic matrix
@@ -309,7 +317,7 @@ int main(int argc, char** argv)
         cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
 
         
-        // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
+        myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
     time(&method2_end);
     double method2 = double(method2_end-method2_start);

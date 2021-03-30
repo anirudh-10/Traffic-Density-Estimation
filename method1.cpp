@@ -96,7 +96,11 @@ void empty_image(string s, Mat&crop)
         throw std::invalid_argument( "Image Closed before selecting 4 points");
         return;
     }
-     
+    source_pts_temp[0]=make_pair(464,1008);
+    source_pts_temp[1]=make_pair(997,213);
+    source_pts_temp[2]=make_pair(1265,197);
+    source_pts_temp[3]=make_pair(1513,1012);
+    
     // Ordering the Points Clicked by the user according to (Top Left,Top Right,Bottom Left,Bottom Right)
     sort(source_pts_temp.begin(),source_pts_temp.end(),comp);
     sort(source_pts_temp.begin(),source_pts_temp.begin()+2);
@@ -187,7 +191,7 @@ int main(int argc, char** argv)
     }
     is_homo.reserve(10000);
     int x = stoi(argv[3]);
-    vector<float> baseline_queue,baseline_dynamic,method1_queue,method1_dynamic;
+    vector<float> baseline_queue,baseline_dynamic,method1_queue,method1_dynamic,method1_queue_final,method1_dynamic_final;
     time_t baseline_start,baseline_end,method1_start,method1_end;
     // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
@@ -355,6 +359,10 @@ int main(int argc, char** argv)
     is_homo.pb(1);
     is_homo.pb(1);
     is_homo.pb(1);
+    std::ofstream myfile;
+    myfile.open ("method1.csv");
+    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+
     //Iterating Frame by Frame
     while (true)
     {
@@ -474,6 +482,7 @@ int main(int argc, char** argv)
 
             // Outputting the Values on the terminal
             cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
+            //myfile<<l<<","<<output_static<<","<<output_dynamic<<",\n";
             method1_queue.push_back(output_static);
             method1_dynamic.push_back(output_dynamic);
         }
@@ -490,13 +499,33 @@ int main(int argc, char** argv)
         else
             cropped_frame_prev=frame;
         // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
-    }}
+    }
     time(&method1_end);
     //double base = double(baseline_end - baseline_start);
     //cout<<base<<endl;
     double method1 = double(method1_end - method1_start);
     cout<<method1<<endl;
-
+    for(int i = 0 ; i < method1_dynamic.size();i++)
+    {
+        for(int j = i ; j < i+x ; j++)
+        {
+            method1_dynamic_final.push_back(method1_dynamic[i]);            
+        }
+    }
+    for(int i = 0 ; i < method1_queue.size();i++)
+    {
+        for(int j = i ; j < i+x ; j++)
+        {
+            method1_queue_final.push_back(method1_queue[i]);
+               
+        }
+    }
+    for(int i = 0 ; i < method1_queue_final.size();i++)
+    {
+        myfile<<i<<","<<method1_queue_final[i]<<","<<method1_dynamic_final[i]<<",\n";
+            
+    }
+    }
 
 
     return 0;

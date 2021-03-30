@@ -99,7 +99,11 @@ void empty_image(string s, Mat&crop)
         throw std::invalid_argument( "Image Closed before selecting 4 points");
         return;
     }
-     
+    source_pts_temp[0]=make_pair(464,1008);
+    source_pts_temp[1]=make_pair(997,213);
+    source_pts_temp[2]=make_pair(1265,197);
+    source_pts_temp[3]=make_pair(1513,1012);
+    
     // Ordering the Points Clicked by the user according to (Top Left,Top Right,Bottom Left,Bottom Right)
     sort(source_pts_temp.begin(),source_pts_temp.end(),comp);
     sort(source_pts_temp.begin(),source_pts_temp.begin()+2);
@@ -245,7 +249,10 @@ int main(int argc, char** argv)
      // std::ofstream myfile;
      // myfile.open ("example3.csv");
      // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-
+    std::ofstream myfile;
+    myfile.open ("method3.csv");
+    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+    vector<pair<int,int>> file_output(10000);
 
     //Iterating Frame by Frame
     while (true)
@@ -328,13 +335,24 @@ int main(int argc, char** argv)
 
         // Outputting the Values on the terminal
         cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
-
+        if(l>=file_output.size())
+        {
+            int x = file_output.size();
+            file_output.resize(2*x);
+        }
+        file_output[l]=make_pair(output_static,output_dynamic);
         
         // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
     time(&method3_end);
     double method3 = double(method3_end - method3_start);
     cout<<method3<<endl;
+    int tteemmpp=1;
+    for(auto x:file_output)
+    {
+        myfile<<tteemmpp<<","<<x.first<<","<<x.second<<",\n";
+        tteemmpp++;
+    }
 
     return 0;
     
