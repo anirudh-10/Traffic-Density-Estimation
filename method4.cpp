@@ -177,6 +177,7 @@ void homography_of_frames(Mat img,Mat&crop)
 
 }
 
+// Storing Each threads local data for computation
 struct thread_data{
     vector<Mat> frame;
     Mat emptyimg;
@@ -186,6 +187,7 @@ struct thread_data{
     int l;
 };
 
+// The function each thread executes
 void * frame_iterate(void * input){
 
     struct thread_data *my_data;
@@ -222,22 +224,23 @@ void * frame_iterate(void * input){
         float output_static = ((float)static_pixels)/((float)total_pixels);
         
         // Improving Queue Density
-        //mtx.lock();
         // Outputting the Values on the terminal
+        mtx.lock();
         cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<endl;
-        // if(l>=file_output.size())
-        // {
-        //     mtx.lock();
-        //     if(l>=file_output.size())
-        //     {
-        //         int x = file_output.size();
-        //         file_output.resize(2*x);
-        //     }
-        //     mtx.unlock();
-        // }
+        mtx.unlock();
+        if(l>=file_output.size())
+        {
+            mtx.lock();
+            if(l>=file_output.size())
+            {
+                int x = file_output.size();
+                file_output.resize(2*x);
+            }
+            mtx.unlock();
+        }
         
-        // //mtx.unlock();
-        // file_output[l]=output_static;
+        //mtx.unlock();
+        file_output[l]=output_static;
         l++;
     }
 
@@ -253,22 +256,30 @@ int main(int argc, char** argv)
 
     if(argc < 4)
     {
-        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file, Video file name and number of threads in the format : ./method4 $(filename) $(Video Filename) $(num) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B method4 empty=$(filename) video=$(Video Filename) num=$(num)\nTo Compile Type Command : make -B method4_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
 
     if(argc > 4)
     {
-        cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Too Many Arguments. Please specify empty Image file, Video file name and number of threads in the format : ./method4 $(filename) $(Video Filename) $(num) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B method4 empty=$(filename) video=$(Video Filename) num=$(num)\nTo Compile Type Command : make -B method4_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
+
     time_t bas,bae;
     int num = stoi(argv[3]);
+
+    // Wrong number of threads
+    if(num<=0)
+    {
+        cout<< "value of number of threads has to be greater than 0"<<endl;
+        throw std::invalid_argument( "Wrong Command Line Argument");
+    }
+
     // Reading the Video
     VideoCapture cap(argv[2]); 
 
@@ -282,22 +293,22 @@ int main(int argc, char** argv)
     // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
     empty_image(argv[1], emptyimg);
+
     time(&bas);
+
     // Counting Number of frames
     int l = 1;
     
-
-     // std::ofstream myfile;
-     // myfile.open ("example3.csv");
-     // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-    // std::ofstream myfile;
-    // myfile.open ("method4.csv");
-    // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+    // file output
+    std::ofstream myfile;
+    myfile.open ("./csvfiles/method4.csv");
+    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
     
-    //cout<<fixed<<setprecision(3);
     //Iterating Frame by Frame
     while (true)
     {
+        // Collecting Frame data for number of threads times 16 frames
+        // We are giving 16 consecutive frames to 1 thread to make use of the cache memory hence reducing the execution time
         pthread_t threads[num];
         struct thread_data input[num];
         vector<Mat> frames[num];
@@ -312,7 +323,11 @@ int main(int argc, char** argv)
                 }
             }
         }
+
+        // When in the last iteration number of frames remaining is less than 16 times the number of threads
         int breakpoint = 0;
+
+        // Checking if the video ended
         for (int i =0;i<num;i++){
             if (dones[i]==false) break;
             breakpoint++;
@@ -322,6 +337,7 @@ int main(int argc, char** argv)
         int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
         int e_static = 35; // Error for estimating queue density (Found Experimentally)
 
+        // Setting up the local space for each thread
         for (int i = 0;i<num;i++){
             input[i].frame = frames[i];
             input[i].emptyimg = emptyimg;
@@ -331,14 +347,13 @@ int main(int argc, char** argv)
             input[i].l = l;
             l+=frames[i].size();
         }
+
+        // Creating and joining threads
         if (breakpoint>0){
             for (int i = 0;i<breakpoint;i++){
-
-                pthread_create(&threads[i], NULL, frame_iterate, (void *)&input[i]);
-                
+                pthread_create(&threads[i], NULL, frame_iterate, (void *)&input[i]);                
             }
             for (int i = 0;i<breakpoint;i++){
-
                 pthread_join(threads[i], NULL);    
             }
         }
@@ -351,15 +366,15 @@ int main(int argc, char** argv)
         }
 
     }
+
     time(&bae);
     cout<<double(bae-bas)<<endl;
-    // int tteemmpp=1;
-    // for(auto x:file_output)
-    // {
-    //     myfile<<tteemmpp<<","<<x<<","<<0<<",\n";
-    //     tteemmpp++;
-    // }
-    // return 0;
+    
+    for(int i = 1 ; i < l ; i++)
+    {
+        myfile<<i<<","<<file_output[i]<<","<<0<<",\n";
+    }
+    return 0;
     
 }
 

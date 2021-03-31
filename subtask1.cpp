@@ -59,17 +59,17 @@ int main(int argc, char** argv)
 
      if(argc < 2)
      {
-          cout<<"Please specify a File name in the format : ./a.out $(filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all file=$(filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run file=$(filename)"<<endl;
+        cout<<"Please specify a File name in the format : ./subtask1 $(filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B subtask1 file=$(filename)\nTo Compile Type Command : make -B subtask1_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
           return -1;
      }
 
      if(argc > 2)
      {
-          cout<<"Too Many Arguments. Enter a single Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) or"<<endl;
-          cout<<"To Compile and Execute Type Command : make all file=$(filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run file=$(filename)"<<endl;
+        cout<<"Too Many Arguments. Enter a single Filename"<<endl;
+        cout<<"To Execute Type Command : ./subtask1 $(filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B subtask1 file=$(filename)\nTo Compile Type Command : make -B subtask1_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
      }

@@ -95,6 +95,11 @@ void empty_image(string s, Mat&crop)
         throw std::invalid_argument( "Image Closed before selecting 4 points");
         return;
     }
+    
+    source_pts_temp[0]=make_pair(464,1008);
+    source_pts_temp[1]=make_pair(997,213);
+    source_pts_temp[2]=make_pair(1265,197);
+    source_pts_temp[3]=make_pair(1513,1012);
      
     // Ordering the Points Clicked by the user according to (Top Left,Top Right,Bottom Left,Bottom Right)
     sort(source_pts_temp.begin(),source_pts_temp.end(),comp);
@@ -170,8 +175,8 @@ int main(int argc, char** argv)
 
     if(argc < 3)
     {
-        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file as well Video file name in the format : ./denserflow $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B denserflow empty=$(filename) video=$(Video Filename)\nTo Compile Type Command : make -B denserflow_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -179,8 +184,8 @@ int main(int argc, char** argv)
     if(argc > 3)
     {
         cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file as well Video file name in the format : ./denserflow $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B denserflow empty=$(filename) video=$(Video Filename)\nTo Compile Type Command : make -B denserflow_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -207,19 +212,21 @@ int main(int argc, char** argv)
     // Counting Number of frames
     int l = 1;
     
+    // Reading initial frames
     Mat first,frame_prev;
     cap.read(first);
     cvtColor(first,frame_prev,COLOR_BGR2GRAY);
     homography_of_frames(frame_prev,cropped_frame_prev);
     
+    // File output
     std::ofstream myfile;
-    myfile.open ("denserflow.csv");
+    myfile.open ("./csvfiles/denserflow.csv");
     myfile << "Time(in seconds),Dynamic Density,\n";
     myfile<<1<<","<<0<<","<<0<<",\n";
     
-    //Iterating Frame by Frame
     destroyAllWindows();
     
+    //Iterating Frame by Frame
     while (true)
     {
         Mat frame;
@@ -244,6 +251,8 @@ int main(int argc, char** argv)
         // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
 
+        // Using farnebacks' dense optical flow method to detect motion in consecutive frames and storing
+        // the result in flow
         Mat flow(cropped_frame_prev.size(),cropped_frame_prev.type());
         calcOpticalFlowFarneback(cropped_frame_prev, cropped_frame, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
 
@@ -280,6 +289,7 @@ int main(int argc, char** argv)
                 }
             }
         }
+
         l++;
         float dynamic_density = ((float)dynamic_pixels)/((float)total_pixels);
         cout<<"Frame no: "<<l<<"    dynamic density: "<<dynamic_density<<endl;
@@ -287,6 +297,7 @@ int main(int argc, char** argv)
 
         cropped_frame_prev = cropped_frame; 
     }
+    
     time(&bae);
     cout<<double(bae-bas)<<endl;    
 

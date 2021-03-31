@@ -175,27 +175,30 @@ int main(int argc, char** argv)
 
     if(argc < 5)
     {
-        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file Video file name and the resolution dimensions in the format : ./method2 $(filename) $(Video Filename) $(x) $(y) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B method2 empty=$(filename) video=$(Video Filename) x=$(X) y=$(Y)\nTo Compile Type Command : make -B method2_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
 
     if(argc > 5)
     {
-        cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Too Many Arguments. Please specify empty Image file Video file name and the resolution dimensions in the format : ./method2 $(filename) $(Video Filename) $(x) $(y) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B method2 empty=$(filename) video=$(Video Filename) x=$(X) y=$(Y)\nTo Compile Type Command : make -B method2_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
     int x = stoi(argv[3]);
     int y = stoi(argv[4]);
+
+    // Wrong Dimension Values 
     if(x<=0 or y<=0)
     {
         cout<< "Resolution dimensions has to be greater than 0"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
     }
+
+    // Final Dimensions of Image
     Size size(x,y);
     Mat dst;
 
@@ -222,13 +225,9 @@ int main(int argc, char** argv)
     // Counting Number of frames
     int l = 0;
     
-
-     // std::ofstream myfile;
-     // myfile.open ("example3.csv");
-     // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-
+    // File output
     std::ofstream myfile;
-    myfile.open ("method2.csv");
+    myfile.open ("./csvfiles/method2.csv");
     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
 
     //Iterating Frame by Frame
@@ -259,6 +258,8 @@ int main(int argc, char** argv)
 
         // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
+
+        // Resizing the image
         resize(cropped_frame,dst,size,0,0,INTER_NEAREST);
         cropped_frame = dst.clone();
           
@@ -320,10 +321,9 @@ int main(int argc, char** argv)
 
         // Outputting the Values on the terminal
         cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
-
-        
         myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
+    
     time(&method2_end);
     double method2 = double(method2_end-method2_start);
     cout<<method2<<endl;

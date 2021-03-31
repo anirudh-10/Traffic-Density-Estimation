@@ -95,7 +95,12 @@ void empty_image(string s, Mat&crop)
         throw std::invalid_argument( "Image Closed before selecting 4 points");
         return;
     }
-     
+    
+    source_pts_temp[0]=make_pair(464,1008);
+    source_pts_temp[1]=make_pair(997,213);
+    source_pts_temp[2]=make_pair(1265,197);
+    source_pts_temp[3]=make_pair(1513,1012);
+    
     // Ordering the Points Clicked by the user according to (Top Left,Top Right,Bottom Left,Bottom Right)
     sort(source_pts_temp.begin(),source_pts_temp.end(),comp);
     sort(source_pts_temp.begin(),source_pts_temp.begin()+2);
@@ -170,8 +175,8 @@ int main(int argc, char** argv)
 
     if(argc < 3)
     {
-        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file as well Video file name in the format : ./sparseflow $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B sparseflow empty=$(filename) video=$(Video Filename)\nTo Compile Type Command : make -B sparseflow_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -179,8 +184,8 @@ int main(int argc, char** argv)
     if(argc > 3)
     {
         cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file as well Video file name in the format : ./sparseflow $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B sparseflow empty=$(filename) video=$(Video Filename)\nTo Compile Type Command : make -B sparseflow_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -198,13 +203,16 @@ int main(int argc, char** argv)
     // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
     empty_image(argv[1], emptyimg);
+
     time(&bas);
+
     // Storing Previous Frames
     Mat cropped_frame_prev;
 
     // Counting Number of frames
     int l = 1;
 
+    // Generating random color pixels
     vector<Scalar> colors;
     RNG rng;
     for(int i = 0; i < 100; i++)
@@ -215,6 +223,7 @@ int main(int argc, char** argv)
         colors.push_back(Scalar(r,g,b));
     }
 
+    // Setting up parameter values for good features to track function and sparse optical flow function
     Mat first,frame_prev,mask;
     
     vector<uchar> status;
@@ -226,20 +235,23 @@ int main(int argc, char** argv)
         blockSize = 7;
     double qualityLevel = 0.3;
     
+    // Reading first frame
     cap.read(first);
     cvtColor(first,frame_prev,COLOR_BGR2GRAY);
     homography_of_frames(frame_prev,cropped_frame_prev);
     
-    //goodFeaturesToTrack(cropped_frame_prev, corners, maxCorners, qualityLevel, minDistance, Mat(), blockSize,false,0.04);
-    
     mask = Mat::zeros(cropped_frame_prev.size(), first.type());
     //prevPts = corners;
+
+    // File output
     std::ofstream myfile;
-    myfile.open ("sparseflow.csv");
+    myfile.open ("./csvfiles/sparseflow.csv");
     myfile << "Time(in seconds),Dynamic Density,\n";
     myfile<<1<<","<<0<<","<<0<<",\n";
-    //Iterating Frame by Frame
+
     destroyAllWindows();
+    
+    //Iterating Frame by Frame
     while (true)
     {
         Mat frame;
@@ -265,13 +277,14 @@ int main(int argc, char** argv)
         // Applying Homography to the current frame
         homography_of_frames(frame,cropped_frame);
         
+        // Detecting the corner points of a moving object
         goodFeaturesToTrack(cropped_frame_prev, corners, maxCorners, qualityLevel, minDistance, Mat(), blockSize,false,0.04);
     
+        // Initializing the output matrix
         mask = Mat::zeros(cropped_frame_prev.size(), first.type());
         prevPts = corners;
 
-
-        //Mat flow(cropped_frame_prev.size(),cropped_frame_prev.type());
+        // Detecting the movement of corner points
         calcOpticalFlowPyrLK(cropped_frame_prev, cropped_frame, prevPts, nextPts, status, err, Size(15,15), 2, criteria);
         vector<Point2f> good_new;
 
@@ -282,35 +295,15 @@ int main(int argc, char** argv)
                 good_new.push_back(nextPts[i]);
                 // Draw the tracks
                 line(mask,nextPts[i], prevPts[i], colors[i], 2);
-                //circle(mask, nextPts[i], 5, colors[i], -1);
             }
         }
+
+        // Converting the mask to grayscasle
         Mat a1,img;
         a1 = mask.clone();
         cvtColor(a1,img,COLOR_BGR2GRAY);
-        
 
-        // visualization
-        // Mat flow_parts[2];
-        // split(flow, flow_parts);
-        // Mat magnitude, angle, magn_norm;
-        // cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
-        // normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);
-        // angle *= ((1.f / 360.f) * (180.f / 255.f));
-        // //build hsv image
-        // Mat _hsv[3], hsv, hsv8, bgr,gray;
-        // _hsv[0] = angle;
-        // _hsv[1] = Mat::ones(angle.size(), CV_32F);
-        // _hsv[2] = magn_norm;
-        // merge(_hsv, 3, hsv);
-        // hsv.convertTo(hsv8, CV_8U, 255.0);
-        // cvtColor(hsv8, bgr, COLOR_HSV2BGR);
-        // cvtColor(bgr,gray, COLOR_BGR2GRAY);
-        imshow("frame2", img);
-        int keyboard = waitKey(30);
-        if (keyboard == 'q' || keyboard == 27)
-            break;
-        
+        // Calculating dynamic pixels
         for(int i=0;i<emptyimg.rows;i++) {
             for (int j=0;j<emptyimg.cols;j++){  
                 total_pixels++;
@@ -320,8 +313,11 @@ int main(int argc, char** argv)
                 }
             }
         }
+
+        // Calculating dynamic density
         float dynamic_density = 50*((float)dynamic_pixels)/((float)total_pixels);
 
+        // Updating States
         l++;
         prevPts = good_new;
         cropped_frame_prev = cropped_frame.clone();
@@ -329,6 +325,7 @@ int main(int argc, char** argv)
         myfile<<l<<","<<0<<","<<dynamic_density<<",\n";
 
     }
+    
     time(&bae);
     cout<<double(bae-bas)<<endl; 
 

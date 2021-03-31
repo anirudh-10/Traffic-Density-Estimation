@@ -96,6 +96,7 @@ void empty_image(string s, Mat&crop)
         return;
     }
     
+    // Hardcoding Points
     source_pts_temp[0]=make_pair(464,1008);
     source_pts_temp[1]=make_pair(997,213);
     source_pts_temp[2]=make_pair(1265,197);
@@ -175,8 +176,8 @@ int main(int argc, char** argv)
 
     if(argc < 3)
     {
-        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file as well Video file name in the format : ./sub2queue $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B sub2queue empty=$(filename) video=$(Video Filename)\nTo Compile Type Command : make -B sub2queue_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -184,8 +185,8 @@ int main(int argc, char** argv)
     if(argc > 3)
     {
         cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file as well Video file name in the format : ./sub2queue $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B sub2queue empty=$(filename) video=$(Video Filename)\nTo Compile Type Command : make -B sub2queue_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -203,19 +204,16 @@ int main(int argc, char** argv)
     // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
     empty_image(argv[1], emptyimg);
+
     time(&bas);
+
     // Counting Number of frames
     int l = 0;
     
-
-     // std::ofstream myfile;
-     // myfile.open ("example3.csv");
-     // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-
+    // File output
     std::ofstream myfile;
-    myfile.open ("sub2queue.csv");
+    myfile.open ("./csvfiles/sub2queue.csv");
     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-    
 
     //Iterating Frame by Frame
     while (true)
@@ -261,14 +259,13 @@ int main(int argc, char** argv)
 
         // Updating States 
         l++;
-        // Improving Queue Density
-
+        
         // Outputting the Values on the terminal
         cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<endl;
 
         myfile<<l<<","<<output_static<<","<<0<<",\n";
-        // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
+    
     time(&bae);
     cout<<double(bae-bas)<<endl;
 

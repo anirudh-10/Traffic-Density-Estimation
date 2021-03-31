@@ -176,6 +176,7 @@ void homography_of_frames(Mat img,Mat&crop)
 
 }
 
+// Storing Each threads local data for computation
 struct thread_data{
     int start;
     int end;
@@ -187,7 +188,8 @@ struct thread_data{
     Mat cropped_frame;
     int l;
 };
-//int start,int end,Mat emptyimg,int e_static,Mat cropped_frame_prev,Mat cropped_frame_2ndlast,Mat cropped_frame_3rdlast, int e_dynamic, Mat cropped_frame, int l
+
+// The function each thread executes
 void *frame_iterate(void *input){
 
     struct thread_data *my_data;
@@ -212,6 +214,7 @@ void *frame_iterate(void *input){
             }
         }
     }
+
     my_data->total_pixels = total_pixels;
     my_data->static_pixels = static_pixels;
 }
@@ -221,39 +224,41 @@ int main(int argc, char** argv)
 
     if(argc < 5)
     {
-        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file,Video file name, number of threads and frame skip value in the format : ./method1_static $(filename) $(Video Filename) $(num) $(Frame skip) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B method1_static empty=$(filename) video=$(Video Filename) num=$(num) x=$(Frame Skip)\nTo Compile Type Command : make -B method1_static_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
 
     if(argc > 5)
     {
-        cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Too Many Arguments. Please specify empty Image file,Video file name, number of threads and frame skip value in the format : ./method1_static $(filename) $(Video Filename) $(num) $(Frame skip) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B method1_static empty=$(filename) video=$(Video Filename) num=$(num) x=$(Frame Skip)\nTo Compile Type Command : make -B method1_static_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
     
     int num = stoi(argv[3]);
     int x = stoi(argv[4]);
+
     // Wrong Values
     if(x<=0 || num<=0)
     {
         cout<< "value of frame skip and number of threads has to be greater than 0"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
     }
-    // Reading the Video
-    time_t method3_start,method3_end;
-    VideoCapture cap(argv[2]); 
 
+    // Reading the Video
+    VideoCapture cap(argv[2]); 
+    
     // if not success, exit program
     if (cap.isOpened() == false)  
     {
         cout << "Cannot open the video file" << endl;
         return -1;
     }
+    
+    time_t method3_start,method3_end;
 
     // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
@@ -266,8 +271,9 @@ int main(int argc, char** argv)
     // Counting Number of frames
     int l = 0;
     
+    // File output
     std::ofstream myfile;
-    myfile.open ("method1_static.csv");
+    myfile.open ("./csvfiles/method1_static.csv");
     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
     
     //Iterating Frame by Frame
@@ -300,6 +306,8 @@ int main(int argc, char** argv)
 
             // Applying Homography to the current frame
             homography_of_frames(frame,cropped_frame);
+
+            // Dividing the matrix to each thread and setting up local space for each thread
             int start = 0;
             int end = emptyimg.rows/num;
             for(int i=0;i<num;i++){
@@ -319,17 +327,18 @@ int main(int argc, char** argv)
                 }            
             }
             
-            // Estimating Pixels changed in static and dynamic matrix using pthreads
+            // Creating Threads
             for (int i = 0;i<num;i++){
-
                 pthread_create(&threads[i], NULL, frame_iterate, (void *)&input[i]);
-                
             }
+
+            // Joining each thread to the main threads
             for (int i = 0;i<num;i++){
 
                 pthread_join(threads[i], NULL);    
             }
 
+            // Calculating pixel values
             for (int i = 0;i<num;i++){
                 total_pixels+=input[i].total_pixels;
                 static_pixels+=input[i].static_pixels;
@@ -345,18 +354,17 @@ int main(int argc, char** argv)
             // Outputting the Values on the terminal
             cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<endl;
             
-    
-            //mtx.unlock();
             file_output.push_back(output_static);
         }
 
-            l++;
         // Updating States 
+        l++;
     }
 
     time(&method3_end);
     double method3 = double(method3_end - method3_start);
     cout<<method3<<endl;
+
     vector<double> file_output_final;
     for(int i = 0 ; i < file_output.size();i++)
     {
@@ -365,12 +373,10 @@ int main(int argc, char** argv)
             file_output_final.push_back((double)file_output[i]);
         }
     }
-    int tteemmpp=1;
     for(int i = 0 ; i < l;i++)
     {
        
-        myfile<<tteemmpp<<","<<file_output_final[i]<<","<<0<<",\n";
-        tteemmpp++;
+        myfile<<i+1<<","<<file_output_final[i]<<","<<0<<",\n";
     }
     return 0;
     

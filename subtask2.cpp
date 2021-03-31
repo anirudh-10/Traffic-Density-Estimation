@@ -175,8 +175,8 @@ int main(int argc, char** argv)
 
     if(argc < 3)
     {
-        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file as well Video file name in the format : ./subtask1 $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B subtask2 empty=$(filename) video=$(Video Filename)\nTo Compile Type Command : make -B subtask2_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -184,8 +184,8 @@ int main(int argc, char** argv)
     if(argc > 3)
     {
         cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"To Execute Type Command : ./subtask1 $(filename) $(Video Filename) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B subtask2 empty=$(filename) video=$(Video Filename)\nTo Compile Type Command : make -B subtask2_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -216,7 +216,7 @@ int main(int argc, char** argv)
      // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
 
     std::ofstream myfile;
-    myfile.open ("subtask2.csv");
+    myfile.open ("./csvfiles/subtask2.csv");
     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
     
     //Iterating Frame by Frame

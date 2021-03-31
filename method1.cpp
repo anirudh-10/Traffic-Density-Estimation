@@ -175,17 +175,17 @@ int main(int argc, char** argv)
 
     if(argc < 4)
     {
-        cout<<"Please specify empty Image file as well Video file name in the format : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Please specify empty Image file,Video file name and frame skip value in the format : ./method1 $(filename) $(Video Filename) $(Frame skip) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B method1 empty=$(filename) video=$(Video Filename) x=$(Frame Skip)\nTo Compile Type Command : make -B method1_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
 
     if(argc > 4)
     {
-        cout<<"Too Many Arguments. Enter only a Empty Image Filename and Video Filename"<<endl;
-        cout<<"To Execute Type Command : ./a.out $(filename) $(Video Filename) or"<<endl;
-        cout<<"To Compile and Execute Type Command : make all empty=$(filename) video = $(Video Filename)\nTo Compile Type Command : make compile\nTo Execute Type Command : make run empty=$(filename) video=$(Video Filename)"<<endl;
+        cout<<"Too Many Arguments. Enter 4 arguments :  Empty Image Filename,Video Filename and Frame skip value"<<endl;
+        cout<<"To Execute Type Command : ./method1 $(filename) $(Video Filename) $(Frame skip) or"<<endl;
+        cout<<"To Compile and Execute Type Command : make -B method1 empty=$(filename) video=$(Video Filename) x=$(Frame Skip)\nTo Compile Type Command : make -B method1_compile"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
         return -1;
     }
@@ -199,16 +199,17 @@ int main(int argc, char** argv)
         throw std::invalid_argument( "Wrong Command Line Argument");
     }
 
-    vector<float> baseline_queue,baseline_dynamic,method1_queue,method1_dynamic,method1_queue_final,method1_dynamic_final;
-    time_t baseline_start,baseline_end,method1_start,method1_end;
+    // for file output
+    vector<float> method1_queue,method1_dynamic,method1_queue_final,method1_dynamic_final;
+    time_t method1_start,method1_end;
+
     // Creating Matrix for Empty(Background) Image according to points chosen by user
     Mat emptyimg;
     empty_image(argv[1], emptyimg);
 
-    time(&baseline_start);
-    time(&baseline_end);
     time(&method1_start);
-    {// Reading the Video
+
+    // Reading the Video
     VideoCapture cap(argv[2]); 
 
     // if not success, exit program
@@ -225,11 +226,7 @@ int main(int argc, char** argv)
     // Counting Number of frames
     int l = 3;
     
-
-     // std::ofstream myfile;
-     // myfile.open ("example3.csv");
-     // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-
+    // Reading first 3 frames
     Mat first,frame_prev;
     cap.read(first);
     cvtColor(first,frame_prev,COLOR_BGR2GRAY);
@@ -240,15 +237,20 @@ int main(int argc, char** argv)
     cap.read(first);
     cvtColor(first,frame_prev,COLOR_BGR2GRAY);
     homography_of_frames(frame_prev,cropped_frame_prev);
+
+    //is_homo matrix implies if homography is done for the previous frames. 1 means done 0 means not done
     is_homo.pb(1);
     is_homo.pb(1);
     is_homo.pb(1);
+
+    // file output
     std::ofstream myfile;
-    myfile.open ("method1.csv");
+    myfile.open ("./csvfiles/method1.csv");
     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
     cout<<"Frame no: "<<1<<"    Queue density: "<<0<<"    dynamic density: "<<0<<endl;
     cout<<"Frame no: "<<2<<"    Queue density: "<<0<<"    dynamic density: "<<0<<endl;
     cout<<"Frame no: "<<3<<"    Queue density: "<<0<<"    dynamic density: "<<0<<endl;
+
     method1_queue.push_back(0);
     method1_dynamic.push_back(0);
     
@@ -284,6 +286,7 @@ int main(int argc, char** argv)
         if (l%x==0){
             // Estimating Pixels changed in static and dynamic matrix
             is_homo_done=1;
+            // Checking if homography is to be done for the previous frames( we require last 3 frames for calculating dynamic density)
             homography_of_frames(frame,cropped_frame);
             for(int tteemmpp = is_homo.size()-1;tteemmpp>=0;tteemmpp--)
             {
@@ -318,7 +321,10 @@ int main(int argc, char** argv)
                     }
                 }
             }
+
             is_homo.pb(1);
+
+            // counting pixels to calculate dynamic and queue density
             for(int i=0;i<emptyimg.rows;i++) {
                 for (int j=0;j<emptyimg.cols;j++){  
                     total_pixels++;
@@ -369,10 +375,11 @@ int main(int argc, char** argv)
 
             // Outputting the Values on the terminal
             cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<"    dynamic density: "<<output_dynamic<<endl;
-            //myfile<<l<<","<<output_static<<","<<output_dynamic<<",\n";
+
             method1_queue.push_back(output_static);
             method1_dynamic.push_back(output_dynamic);
         }
+
         if(is_homo_done==0)
         {
             is_homo.pb(0);
@@ -388,6 +395,8 @@ int main(int argc, char** argv)
             cropped_frame_prev=frame;
     }
     time(&method1_end);
+    double method1 = double(method1_end - method1_start);
+    cout<<method1<<endl;
 
     // Outputting the values in file
     int atleast = max(x,3);
@@ -401,8 +410,6 @@ int main(int argc, char** argv)
         method1_dynamic_final.pb(0);
         method1_queue_final.pb(0);
     }
-    double method1 = double(method1_end - method1_start);
-    cout<<method1<<endl;
     for(int i = 1 ; i < method1_dynamic.size();i++)
     {
         for(int j = i ; j < i+x ; j++)
@@ -423,9 +430,6 @@ int main(int argc, char** argv)
         myfile<<i<<","<<method1_queue_final[i-1]<<","<<method1_dynamic_final[i-1]<<",\n";
             
     }
-    }
-
 
     return 0;
-    
 }
