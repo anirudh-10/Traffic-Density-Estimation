@@ -178,7 +178,7 @@ void homography_of_frames(Mat img,Mat&crop)
 }
 
 struct thread_data{
-    Mat frame;
+    vector<Mat> frame;
     Mat emptyimg;
     int total_pixels;
     int static_pixels;
@@ -191,52 +191,57 @@ void * frame_iterate(void * input){
     struct thread_data *my_data;
     my_data = (struct thread_data *) input;
 
-    Mat frame = my_data->frame;
+    vector<Mat> fra = my_data->frame;
     Mat emptyimg = my_data->emptyimg;
     int total_pixels = my_data->total_pixels;
     int static_pixels = my_data->static_pixels;
     int e_static = my_data->e_static;
     int l = my_data->l;
     //Converting Video Frame to grayscale
-    Mat temp_gray;
-    cvtColor(frame, temp_gray, COLOR_BGR2GRAY);
-    frame = temp_gray;
-    Mat cropped_frame;
+    for(int i=0;i<fra.size();i++){
+        Mat frame = fra[i];
+        Mat temp_gray;
+        cvtColor(frame, temp_gray, COLOR_BGR2GRAY);
+        frame = temp_gray;
+        Mat cropped_frame;
 
-    // Applying Homography to the current frame
-    homography_of_frames(frame,cropped_frame);
-        
-    // Estimating Pixels changed in static and dynamic matrix
-    for(int i=0;i<emptyimg.rows;i++) {
-        for (int j=0;j<emptyimg.cols;j++){  
-            total_pixels++;
-            int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
-            if (abs(a) > e_static){
-                static_pixels++;
+        // Applying Homography to the current frame
+        homography_of_frames(frame,cropped_frame);
+            
+        // Estimating Pixels changed in static and dynamic matrix
+        for(int i=0;i<emptyimg.rows;i++) {
+            for (int j=0;j<emptyimg.cols;j++){  
+                total_pixels++;
+                int a = emptyimg.at<uchar>(i,j) - cropped_frame.at<uchar>(i,j);
+                if (abs(a) > e_static){
+                    static_pixels++;
+                }
             }
         }
+        // calculating queue and dynamic density
+        float output_static = ((float)static_pixels)/((float)total_pixels);
+        
+        // Improving Queue Density
+        //mtx.lock();
+        // Outputting the Values on the terminal
+        cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<endl;
+        // if(l>=file_output.size())
+        // {
+        //     mtx.lock();
+        //     if(l>=file_output.size())
+        //     {
+        //         int x = file_output.size();
+        //         file_output.resize(2*x);
+        //     }
+        //     mtx.unlock();
+        // }
+        
+        // //mtx.unlock();
+        // file_output[l]=output_static;
+        l++;
     }
 
-    // calculating queue and dynamic density
-    float output_static = ((float)static_pixels)/((float)total_pixels);
-    
-    // Improving Queue Density
-    //mtx.lock();
-    // Outputting the Values on the terminal
-    cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<endl;
-    if(l>=file_output.size())
-    {
-        mtx.lock();
-        if(l>=file_output.size())
-        {
-            int x = file_output.size();
-            file_output.resize(2*x);
-        }
-        mtx.unlock();
-    }
-    
-    //mtx.unlock();
-    file_output[l]=output_static;
+        
         
 }
 
@@ -279,15 +284,15 @@ int main(int argc, char** argv)
     empty_image(argv[1], emptyimg);
     time(&bas);
     // Counting Number of frames
-    int l = 0;
+    int l = 1;
     
 
      // std::ofstream myfile;
      // myfile.open ("example3.csv");
      // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-    std::ofstream myfile;
-    myfile.open ("method4.csv");
-    myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
+    // std::ofstream myfile;
+    // myfile.open ("method4.csv");
+    // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
     
     //cout<<fixed<<setprecision(3);
     //Iterating Frame by Frame
@@ -295,13 +300,17 @@ int main(int argc, char** argv)
     {
         pthread_t threads[num];
         struct thread_data input[num];
-        Mat frames[num];
-        bool dones[num];
+        vector<Mat> frames[num];
+        bool dones[num] = {0};
         for (int i=0;i<num;i++){
-            Mat frame;
-            bool done = cap.read(frame); // read a new frame from video 
-            frames[i] = frame;
-            dones[i] = done;
+            for (int j=0;j<16;j++){
+                Mat frame;
+                bool done = cap.read(frame); // read a new frame from video 
+                if (done==true){
+                    frames[i].push_back(frame);
+                    dones[i] = true;
+                }
+            }
         }
         int breakpoint = 0;
         for (int i =0;i<num;i++){
@@ -314,13 +323,13 @@ int main(int argc, char** argv)
         int e_static = 35; // Error for estimating queue density (Found Experimentally)
 
         for (int i = 0;i<num;i++){
-            l++;
             input[i].frame = frames[i];
             input[i].emptyimg = emptyimg;
             input[i].total_pixels = 0;
             input[i].static_pixels = 0;
             input[i].e_static = e_static;
             input[i].l = l;
+            l+=frames[i].size();
         }
         if (breakpoint>0){
             for (int i = 0;i<breakpoint;i++){
@@ -344,13 +353,13 @@ int main(int argc, char** argv)
     }
     time(&bae);
     cout<<double(bae-bas)<<endl;
-    int tteemmpp=1;
-    for(auto x:file_output)
-    {
-        myfile<<tteemmpp<<","<<x<<","<<0<<",\n";
-        tteemmpp++;
-    }
-    return 0;
+    // int tteemmpp=1;
+    // for(auto x:file_output)
+    // {
+    //     myfile<<tteemmpp<<","<<x<<","<<0<<",\n";
+    //     tteemmpp++;
+    // }
+    // return 0;
     
 }
 

@@ -423,9 +423,9 @@ int main(int argc, char** argv)
     double method3 = double(method3_end - method3_start);
     cout<<method3<<endl;
     int tteemmpp=1;
-    for(auto x:file_output)
+    for(int i = 1 ; i<=l;i++)
     {
-        myfile<<tteemmpp<<","<<x<<","<<0<<",\n";
+        myfile<<tteemmpp<<","<<file_output[i]<<","<<0<<",\n";
         tteemmpp++;
     }
     return 0;

@@ -328,7 +328,7 @@ int main(int argc, char** argv)
     double method2 = double(method2_end-method2_start);
     cout<<method2<<endl;
     cout<<endl;
-    cout<<"total pixels" << x*y<<endl;
+    cout<<"total pixels : " << x*y<<endl;
     return 0;
     
 }

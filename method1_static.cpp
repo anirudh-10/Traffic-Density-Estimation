@@ -21,7 +21,7 @@ bool comp(pair<int,int> x,pair<int,int> y)
     return false;
 }
 
-vector<double> file_output(10000);
+vector<double> file_output;
 // Global Vectors for storing points
 vector<Point2f> source_pts,destination_pts;
 vector<pair<int,int>> source_pts_temp,destination_pts_temp;
@@ -101,6 +101,7 @@ void empty_image(string s, Mat&crop)
         return;
     }
     
+    // Hardcoding the points
     source_pts_temp[0]=make_pair(464,1008);
     source_pts_temp[1]=make_pair(997,213);
     source_pts_temp[2]=make_pair(1265,197);
@@ -213,9 +214,6 @@ void *frame_iterate(void *input){
     }
     my_data->total_pixels = total_pixels;
     my_data->static_pixels = static_pixels;
-    // cout<<static_pixels<<endl;
-    // cout<<dynamic_pixels<<endl;
-    // cout<<total_pixels<<endl;
 }
 
 int main(int argc, char** argv)
@@ -240,9 +238,10 @@ int main(int argc, char** argv)
     
     int num = stoi(argv[3]);
     int x = stoi(argv[4]);
-    if(x<=0)
+    // Wrong Values
+    if(x<=0 || num<=0)
     {
-        cout<< "value of frame skip has to be greater than 0"<<endl;
+        cout<< "value of frame skip and number of threads has to be greater than 0"<<endl;
         throw std::invalid_argument( "Wrong Command Line Argument");
     }
     // Reading the Video
@@ -260,17 +259,13 @@ int main(int argc, char** argv)
     Mat emptyimg;
     empty_image(argv[1], emptyimg);
     time(&method3_start);
+    
     // Storing Previous Frames
     Mat cropped_frame_prev;
 
     // Counting Number of frames
     int l = 0;
     
-
-     // std::ofstream myfile;
-     // myfile.open ("example3.csv");
-     // myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
-
     std::ofstream myfile;
     myfile.open ("method1_static.csv");
     myfile << "Time(in seconds),Queue Density,Dynamic Density,\n";
@@ -278,10 +273,14 @@ int main(int argc, char** argv)
     //Iterating Frame by Frame
     while (true)
     {
-        l++;
         Mat frame;
         bool done = cap.read(frame); // read a new frame from video 
-            
+        //Breaking the while loop at the end of the video
+        if (done == false) 
+        {
+            cout << "Found the end of the video" << endl;
+            break;
+        }    
         if(l%x==0)
         {
             pthread_t threads[num];
@@ -291,12 +290,7 @@ int main(int argc, char** argv)
             int static_pixels = 0; // Counting Number of pixels changed in the current frame relative to backgroun image
             
 
-            //Breaking the while loop at the end of the video
-            if (done == false) 
-            {
-                cout << "Found the end of the video" << endl;
-                break;
-            }
+            
 
             //Converting Video Frame to grayscale
             Mat temp_gray;
@@ -325,7 +319,7 @@ int main(int argc, char** argv)
                 }            
             }
             
-            // Estimating Pixels changed in static and dynamic matrix
+            // Estimating Pixels changed in static and dynamic matrix using pthreads
             for (int i = 0;i<num;i++){
 
                 pthread_create(&threads[i], NULL, frame_iterate, (void *)&input[i]);
@@ -347,39 +341,32 @@ int main(int argc, char** argv)
             
             cout<<fixed<<setprecision(3);
             cropped_frame_prev = cropped_frame;
+
             // Outputting the Values on the terminal
             cout<<"Frame no: "<<l<<"    Queue density: "<<output_static<<endl;
-            if(l>=file_output.size())
-            {
-                int xxx = file_output.size();
-                file_output.resize(2*xxx);
-            }
+            
     
             //mtx.unlock();
-            file_output[l]=output_static;
+            file_output.push_back(output_static);
         }
 
+            l++;
         // Updating States 
-        
-
-
-        
-        // myfile << (float)l/((float)15.000) << "," <<output_static << "," << output_dynamic<<",\n"; 
     }
+
     time(&method3_end);
     double method3 = double(method3_end - method3_start);
     cout<<method3<<endl;
     vector<double> file_output_final;
-    for(int i = 1 ; i < l;i++)
+    for(int i = 0 ; i < file_output.size();i++)
     {
         for(int j = i ; j < i+x ; j++)
         {
-            file_output_final.push_back(file_output[i]);
-               
+            file_output_final.push_back((double)file_output[i]);
         }
     }
     int tteemmpp=1;
-    for(int i = 1 ; i < l;i++)
+    for(int i = 0 ; i < l;i++)
     {
        
         myfile<<tteemmpp<<","<<file_output_final[i]<<","<<0<<",\n";

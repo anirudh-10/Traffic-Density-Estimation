@@ -205,12 +205,17 @@ int main(int argc, char** argv)
     time(&bas);
     
     // Counting Number of frames
-    int l = 0;
+    int l = 1;
     
     Mat first,frame_prev;
     cap.read(first);
     cvtColor(first,frame_prev,COLOR_BGR2GRAY);
     homography_of_frames(frame_prev,cropped_frame_prev);
+    
+    std::ofstream myfile;
+    myfile.open ("denserflow.csv");
+    myfile << "Time(in seconds),Dynamic Density,\n";
+    myfile<<1<<","<<0<<","<<0<<",\n";
     
     //Iterating Frame by Frame
     destroyAllWindows();
@@ -275,10 +280,11 @@ int main(int argc, char** argv)
                 }
             }
         }
+        l++;
         float dynamic_density = ((float)dynamic_pixels)/((float)total_pixels);
         cout<<"Frame no: "<<l<<"    dynamic density: "<<dynamic_density<<endl;
-        
-        l++;
+        myfile<<l<<","<<0<<","<<dynamic_density<<",\n";
+
         cropped_frame_prev = cropped_frame; 
     }
     time(&bae);

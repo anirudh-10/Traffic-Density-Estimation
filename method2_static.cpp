@@ -284,6 +284,7 @@ int main(int argc, char** argv)
     //Iterating Frame by Frame
     while (true)
     {
+        l++;
         Mat frame;
         bool done = cap.read(frame); // read a new frame from video 
         pthread_t threads[num];
@@ -352,7 +353,6 @@ int main(int argc, char** argv)
         cout<<fixed<<setprecision(3);
 
         // Updating States 
-        l++;
         cropped_frame_prev = cropped_frame;
 
 
@@ -374,13 +374,13 @@ int main(int argc, char** argv)
     double method3 = double(method3_end - method3_start);
     cout<<method3<<endl;
     int tteemmpp=1;
-    for(auto x:file_output)
+    for(int i = 1 ; i < l ;i++)
     {
-        myfile<<tteemmpp<<","<<x<<","<<0<<",\n";
+        myfile<<tteemmpp<<","<<file_output[i-1]<<","<<0<<",\n";
         tteemmpp++;
     }
     cout<<endl;
-    cout<<"total pixels" << x*y<<endl;
+    cout<<"total pixels : " << x*y<<endl;
     return 0;
 }
 

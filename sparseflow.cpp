@@ -234,7 +234,10 @@ int main(int argc, char** argv)
     
     mask = Mat::zeros(cropped_frame_prev.size(), first.type());
     //prevPts = corners;
-    
+    std::ofstream myfile;
+    myfile.open ("sparseflow.csv");
+    myfile << "Time(in seconds),Dynamic Density,\n";
+    myfile<<1<<","<<0<<","<<0<<",\n";
     //Iterating Frame by Frame
     destroyAllWindows();
     while (true)
@@ -323,6 +326,7 @@ int main(int argc, char** argv)
         prevPts = good_new;
         cropped_frame_prev = cropped_frame.clone();
         cout<<"Frame no: "<<l<<"    sparse density: "<<dynamic_density<<endl;
+        myfile<<l<<","<<0<<","<<dynamic_density<<",\n";
 
     }
     time(&bae);

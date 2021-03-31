@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     	error_dynamic+=error_value(dynamic_queue,1);
     	i++;
 	}
-	cout<<"static queue error is : "<<(double)(error_static/static_set.size())<<endl;
-	cout<<"dynamic queue error is : "<<(double)(error_dynamic/dynamic_set.size())<<endl;
+	cout<<"static queue error is : "<<(double)(error_static/((double)static_set.size()))<<endl;
+	cout<<"dynamic queue error is : "<<(double)(error_dynamic/((double)dynamic_set.size()))<<endl;
 
 }
