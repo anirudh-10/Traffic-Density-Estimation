@@ -73,7 +73,7 @@ i. Compiling all files :$ make compile
 	To compile:$ make utility_compile
 	To execute and compile: make -B utility file1=$(file) file2=$(file)
 	To execute:$ ./utility $(file1) $(file2)
-### Plot Graph:
+#### Plot Graph:
 	To execute:$ python3 plotgraph.py
 	After running the above command the terminal will ask for following inputs:
 	Give filename: $(filename)
