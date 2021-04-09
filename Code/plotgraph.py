@@ -5,15 +5,14 @@ def readfile (name):
     file = open(name,"r")
     l = file.readlines()
     l.pop(0)
-    #print(l[0])
     m = list(map(lambda x: x.split(","),l))
-    #print(m[0])
-    m = list(map(lambda x: x[:3],m))
-    # print("dsa")
-    # print(m[1])
-    # print("asd")
+    n = len(m[0])
+    m = list(map(lambda x: x[:n-1],m))
     m = list(map(lambda x: list(map(lambda y: float(y),x)),m))
     return m
+
+def compare(x):
+    return x[0]
 
 def plotgraph (x,y):
     plt.plot(x, y)
@@ -27,9 +26,15 @@ def main():
     b = int(input("x-axis: "))
     c = int(input("y-axis: "))
     m = readfile(a)
-    #print(m[2])
     x = list(map(lambda x: x[b-1],m))
     y = list(map(lambda x: x[c-1],m))
+    new_l = [(0,0) for i in  range(len(x))]
+    for i in range(len(x)):
+        z = (x[i],y[i])
+        new_l[i] = z
+    new_k = sorted(new_l,key = compare)
+    x = list(map(lambda x: x[0],new_k))
+    y = list(map(lambda x: x[1],new_k))
     plotgraph(x,y)
 main()
     

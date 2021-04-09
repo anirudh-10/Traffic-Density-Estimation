@@ -7,6 +7,7 @@ The code takes a background image and a video file and outputs the estimated tra
 ### Pre-requisites:
 1) C++ Compiler(Preferably the latest version) (If not refer https://www.tutorialspoint.com/cplusplus/cpp_environment_setup.htm)
 2) OpenCV
+3) python3
 
 To install OpenCV refer:
 
@@ -71,7 +72,13 @@ i. Compiling all files :$ make compile
 #### Utility:
 	To compile:$ make utility_compile
 	To execute and compile: make -B utility file1=$(file) file2=$(file)
-	To execute:$ ./utility $(file1) $(file2)	
+	To execute:$ ./utility $(file1) $(file2)
+### Plot Graph:
+	To execute:$ python3 plotgraph.py
+	After running the above command the terminal will ask for following inputs:
+	Give filename: $(filename)
+	x-axis: $(Column number in the csv file to be shown as x-axis)
+	y-axis: $(Column number in the csv file to be shown as y-axis)	
 
 where filename is the name of the background image file with extension and Video Filename is the name of the video with extension and num referes to number of threads  and X,Y refers to the new dimensions of the image
 
