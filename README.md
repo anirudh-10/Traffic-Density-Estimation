@@ -1,4 +1,4 @@
-# COP290-Assignment1
+# Traffic Density Estimation
 
 ### Queue Density and Dynamic Density Estimation and Optimization
 
